@@ -859,15 +859,9 @@ function pintarCuenta(){
   }else if(uid){
     c.innerHTML=`<p class="sub">Sincronizando como <b>${esc(correo||'')}</b>. Entra con el mismo correo en tus otros dispositivos.</p>
       <div class="btns"><button type="button" class="btn" data-cu="sync">Sincronizar ahora</button><button type="button" class="btn" data-cu="salir">Cerrar sesión</button></div>`;
-  }else if(correoPend){
-    c.innerHTML=`<p class="sub">Te envié un correo a <b>${esc(correoPend)}</b>. Abre el enlace en este mismo dispositivo, o escribe aquí el código si tu correo trae uno.</p>
-      <label for="cu-codigo">Código</label><input id="cu-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456">
-      <div class="btns"><button type="button" class="btn" data-cu="otro">Usar otro correo</button><button type="button" class="btn pri" data-cu="codigo">Entrar</button></div>`;
   }else{
     c.innerHTML=`<p class="sub">Entra para tener el mismo bestiario en el celular y en la computadora.</p>
-      <div class="btns"><button type="button" class="btn pri" data-cu="github">Entrar con GitHub</button></div>
-      <label for="cu-correo">O con tu correo</label><input id="cu-correo" type="email" autocomplete="email" placeholder="tu@correo.com">
-      <div class="btns" style="margin-top:10px"><button type="button" class="btn" data-cu="enviar">Enviarme el enlace</button></div>`;
+      <div class="btns"><button type="button" class="btn pri" data-cu="github">Entrar con GitHub</button></div>`;
   }
 }
 /* ---------- avisos cada hora ---------- */
