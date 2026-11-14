@@ -247,7 +247,8 @@ label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.1em;t
 .derrota{position:fixed;inset:0;background:radial-gradient(circle at 50% 45%,#3a0f0bf2,#070404fa 70%);display:none;align-items:center;justify-content:center;z-index:20;padding:30px;text-align:center}
 .derrota.on{display:flex;animation:aparece .5s ease-out}
 @keyframes aparece{from{opacity:0}to{opacity:1}}
-.derrota .k{font-family:var(--mono);font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold)}
+.derrota .k{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+@media (max-width:480px){.derrota{padding:24px 16px}.derrota .k{font-size:10.5px;letter-spacing:.06em}}
 .derrota .sprite{width:132px;height:132px;margin:22px auto;animation:cae 1s cubic-bezier(.3,.6,.2,1)}
 .derrota .sprite svg{width:96px;height:96px;animation:none;filter:grayscale(.85) brightness(.8)}
 @keyframes cae{from{transform:scale(1.4) rotate(-8deg);opacity:0}to{transform:none;opacity:1}}
@@ -824,23 +825,23 @@ function animar(id,n,el){
 }
 function mostrarGuardia(r){
   $('d-ok').textContent='Seguir';
-  $('d-k').textContent=(esNemesis(r)?'Guardia de tu némesis vencida':'Guardia vencida')+' · el día cuenta';
+  $('d-k').textContent=esNemesis(r)?'Guardia del némesis vencida':'Guardia vencida';
   $('d-sprite').innerHTML=spriteSVG(ESBIRRO,2);
   $('d-n').textContent='Guardia de '+r.nombre;
-  $('d-e').textContent=`${r.nombre} se queda sin escolta hasta mañana. Le quedan ${fmt(restante(r))} ${r.unidad}.`;
+  $('d-e').textContent=`El día cuenta. ${r.nombre} se queda sin escolta hasta mañana y le quedan ${fmt(restante(r))} ${r.unidad}.`;
   $('d-frase').innerHTML=fraseHTML(elegir(FRASES,r.id+hoy()+'g'));
-  if(S.heroe)$('d-k').textContent+=' · victoria n.º '+victoriasDe(S.heroe);
+  if(S.heroe)$('d-k').textContent+=' · victoria '+victoriasDe(S.heroe);
   $('derrota').classList.remove('sube');$('derrota').classList.add('on');
 }
 function mostrarDerrota(r){
   const jefe=r.tipo==='jefe';
   $('d-ok').textContent='Seguir';
-  $('d-k').textContent=esNemesis(r)?(jefe?'Tu némesis ha caído':'Némesis vencido · el día cuenta'):(jefe?'Ha caído':'Vencido por hoy');
+  $('d-k').textContent=esNemesis(r)?(jefe?'Tu némesis ha caído':'Némesis vencido'):(jefe?'Ha caído':'Vencido por hoy');
   $('d-sprite').innerHTML=sprite(r);
   $('d-n').textContent=r.nombre;
-  $('d-e').textContent=(jefe?elegir(EPITAFIOS,r.id):elegir(GANADO_HOY,r.id+hoy())).replace('{n}',r.nombre);
+  $('d-e').textContent=(jefe?elegir(EPITAFIOS,r.id):elegir(GANADO_HOY,r.id+hoy())).replace('{n}',r.nombre)+(esNemesis(r)&&!jefe?' El día cuenta.':'');
   $('d-frase').innerHTML=fraseHTML(elegir(FRASES,r.id+hoy()+'f'));
-  if(S.heroe)$('d-k').textContent+=' · victoria n.º '+victoriasDe(S.heroe);
+  if(S.heroe)$('d-k').textContent+=' · victoria '+victoriasDe(S.heroe);
   $('derrota').classList.remove('sube');$('derrota').classList.add('on');
 }
 $('frase').onclick=()=>{fraseOffset++;pintarFrase()};
