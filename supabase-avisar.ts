@@ -50,11 +50,13 @@ function descansando(t: number, h: H, tz: string) {
 }
 // La vida baja a cada hora en punto. Una hora en punto cuenta si la hora anterior no era de descanso.
 const HORA = 36e5;
-const cuentaPunto = (t: number, h: H, tz: string) => !descansando(t - 60000, h, tz);
-function vidaHeroe(h: H, ahora: number, tz: string) {
+// Solo cuenta si en esa hora había algún demonio por derrotar.
+const cuentaPunto = (t: number, S: H, tz: string) => !descansando(t - 60000, S.heroe, tz) && hayPendientesEn(S, t, tz);
+function vidaHeroe(S: H, ahora: number, tz: string) {
+  const h = S.heroe;
   let n = 0;
   for (let t = Math.floor(Math.max(h.ultimo, ahora - 14 * 864e5) / HORA) * HORA + HORA; t <= ahora; t += HORA)
-    if (cuentaPunto(t, h, tz)) n++;
+    if (cuentaPunto(t, S, tz)) n++;
   return Math.max(0, h.vida - n * h.drenaje);
 }
 function nemesisHoy(S: H, hoy: string) {
@@ -77,21 +79,42 @@ function cuota(r: H, k: string) {
   q = Number.isInteger(r.vida) ? Math.ceil(q) : r2(q);
   return Math.min(q, ini);
 }
-function pendiente(r: H, hoy: string) {
+// furia: si llevas días sin enfrentar a un rival diario, hoy tiene más vida (igual que en la web)
+function vidaDiario(r: H, k: string, hoyK: string) {
+  if (k !== hoyK) return r.vida;
+  let ult = r.creado || hoyK;
+  for (const d in r.dias || {}) if (d < hoyK && r.dias[d] > 0 && d > ult) ult = d;
+  for (const x of r.hist || []) if (x.d && x.d < hoyK && x.d > ult) ult = x.d;
+  const g = ult >= hoyK ? 0 : Math.max(0, diaNum(hoyK) - diaNum(ult) - 1);
+  const b = g >= 4 ? 0.5 : g >= 2 ? 0.25 : 0;
+  if (!b) return r.vida;
+  const v = r.vida * (1 + b);
+  return Number.isInteger(r.vida) ? Math.ceil(v) : r2(v);
+}
+function pendiente(r: H, hoy: string, hoyK = hoy) {
+  if (r.archivado) return false;
+  if (r.creado && hoy < r.creado) return false;
   if (r.tipo === "jefe") {
-    if (r.caidoEn) return false;
+    if (r.caidoEn && r.caidoEn <= hoy) return false;
     const q = cuota(r, hoy);
     return q > 0 ? ((r.dias || {})[hoy] || 0) < q : true;
   }
-  return ((r.dias || {})[hoy] || 0) < r.vida;
+  return ((r.dias || {})[hoy] || 0) < vidaDiario(r, hoy, hoyK);
 }
+function pendienteEn(r: H, t: number, tz: string) {
+  if (r.creadoT && t < r.creadoT) return false;
+  if (r.archivado && (!r.archivadoT || t >= r.archivadoT)) return false;
+  const k = diaLocal(t - 60000, tz);
+  return pendiente({ ...r, archivado: null }, k, diaLocal(Date.now(), tz));
+}
+const hayPendientesEn = (S: H, t: number, tz: string) => (S.rivales || []).some((r: H) => pendienteEn(r, t, tz));
 
 /* ---------- el mensaje ---------- */
 const elegir = <T>(a: T[], n: number) => a[Math.abs(n) % a.length];
 export function mensaje(S: H, ahora: number, tz: string) {
   const h = S.heroe;
   const H = h.nombre || "Tu héroe";
-  const v = Math.ceil(vidaHeroe(h, ahora, tz));
+  const v = Math.ceil(vidaHeroe(S, ahora, tz));
   const hoy = diaLocal(ahora, tz);
   const vivos = (S.rivales || []).filter((r: H) => pendiente(r, hoy));
   const nem = nemesisHoy(S, hoy);
@@ -165,9 +188,10 @@ async function enviar(subs: any[], forzar: boolean) {
     const S = datos.get(s.user_id);
     if (!S || !S.heroe) continue;
     const tz = s.tz || "America/Guayaquil";
-    // solo avisa en las horas en punto que le quitan vida (la que cierra una hora activa)
+    // solo avisa en las horas en punto que le quitan vida: hora activa y con demonios en pie
     const punto = Math.round(ahora / HORA) * HORA;
-    if (!forzar && !cuentaPunto(punto, S.heroe, tz)) continue;
+    // sin demonios por derrotar no hay aviso
+    if (!forzar && !cuentaPunto(punto, S, tz)) continue;
     const m = mensaje(S, ahora, tz);
     try {
       await webpush.sendNotification(s.sub, JSON.stringify(m), { TTL: 3000, urgency: "normal" });

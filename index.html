@@ -193,6 +193,13 @@ h1 span{color:var(--blood2)}
 .panel textarea{width:100%;background:#120e0d;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:15px var(--mono);color:var(--paper);min-height:84px;resize:vertical}
 .panel textarea:focus{outline:none;border-color:var(--gold)}
 .solo-jefe{display:none}.solo-jefe.on{display:block}
+.hist-item{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid #261d19}
+.hist-item .sprite{flex:0 0 48px;height:48px}.hist-item .sprite svg{width:32px;height:32px;animation:none}
+.hist-item .hi{flex:1;min-width:0}.hist-item .n{font-size:20px;font-weight:700}
+.hist-item .f{font-family:var(--mono);font-size:11.5px;color:var(--faint);line-height:1.5}
+.hist-item .hb{display:flex;flex-direction:column;gap:6px}
+.hist-item .hb button{font-family:var(--mono);font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
+.hist-item .hb .peligro{color:#d07a6e;border-color:#5a2a24}
 .nuevo{width:100%;border:1px dashed #5a463b;border-radius:14px;padding:16px;color:var(--dim);font-size:19px;font-style:italic}
 .nuevo:hover{color:var(--paper);border-color:var(--gold)}
 
@@ -260,13 +267,14 @@ label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.1em;t
   </header>
   <p class="lema">Derrota a tus demonios a diario.</p>
   <blockquote class="frase" id="frase" title="Toca para otra frase"></blockquote>
-  <nav class="pestanas"><a href="#" data-tab="batalla">Batalla</a><a href="#trofeos" data-tab="trofeos">Trofeos</a></nav>
+  <nav class="pestanas"><a href="#" data-tab="batalla">Batalla</a><a href="#trofeos" data-tab="trofeos">Trofeos</a><a href="#historial" data-tab="historial">Historial</a></nav>
   <div id="vista-batalla">
     <section id="heroe"></section>
     <div class="filtros" id="filtros"></div>
     <main id="lista"></main>
     <section id="caidos"></section>
   </div>
+  <div id="vista-historial" hidden><div id="historial"></div></div>
   <div id="vista-trofeos" hidden>
     <div class="filtros" id="filtros-t"></div>
     <div class="mes-nav"><button data-act="mes-prev" aria-label="Mes anterior">‹</button><div id="mes-titulo"></div><button data-act="mes-next" aria-label="Mes siguiente">›</button></div>
@@ -433,11 +441,11 @@ function descansando(t,h){const d=new Date(t),x=d.getHours()+d.getMinutes()/60,a
 // La vida baja a cada hora en punto (reloj local). Una hora en punto cuenta si la hora anterior no era de descanso.
 const HORA=36e5;
 function siguientePunto(t){const d=new Date(t);d.setMinutes(0,0,0);return d.getTime()+HORA}
-const cuentaPunto=(t,h)=>!descansando(t-60000,h);
+const cuentaPunto=(t,h)=>!descansando(t-60000,h)&&hayPendientesEn(t);
 function golpesReloj(h,t0,t1){let n=0;for(let t=siguientePunto(Math.max(t0,t1-14*864e5));t<=t1;t+=HORA)if(cuentaPunto(t,h))n++;return n}
 function vidaHeroe(h,ahora){ahora=ahora||Date.now();return Math.max(0,h.vida-golpesReloj(h,h.ultimo,ahora)*h.drenaje)}
 function momentoCaida(h){const ahora=Date.now();let v=h.vida;for(let t=siguientePunto(Math.max(h.ultimo,ahora-14*864e5));t<=ahora;t+=HORA)if(cuentaPunto(t,h)){v-=h.drenaje;if(v<=0)return t}return ahora}
-function proximoGolpe(h){let t=siguientePunto(Date.now());for(let i=0;i<48&&!cuentaPunto(t,h);i++)t+=HORA;return t}
+function proximoGolpe(h){let t=siguientePunto(Date.now());for(let i=0;i<48;i++,t+=HORA)if(cuentaPunto(t,h))return t;return null}
 function horasHastaCaer(h,v){const ahora=Date.now();let t=siguientePunto(ahora),x=v;for(let i=0;i<24*14;i++,t+=HORA)if(cuentaPunto(t,h)){x-=h.drenaje;if(x<=0)break}return (t-ahora)/HORA}
 function curarHeroe(cura){
   const h=S.heroe;if(!h)return 0;const ahora=Date.now();let v=vidaHeroe(h,ahora),levantado=false;
@@ -494,11 +502,13 @@ function heroeHTML(){
     const tc=new Date(momentoCaida(h));
     aviso=`Caíste ${tc.toLocaleDateString('es-EC',{weekday:'long'})} a las ${tc.toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'})}. Golpea a cualquier rival para levantarte.`;
   }else{
-    const hr=horasHastaCaer(h,v);
+    const pgT=proximoGolpe(h),hr=pgT?horasHastaCaer(h,v):Infinity;
     const desc=descansando(ahora,h)?` · <b>descansando</b> hasta las ${String(h.descansoFin).padStart(2,'0')}:00`:'';
     const dias=Math.floor((ahora-(h.enPieDesde||h.creado||ahora))/864e5);
-    const pg=new Date(proximoGolpe(h)).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});
-    info=`Pierdes <b>${h.drenaje} %</b> a cada hora en punto · próximo golpe a las <b>${pg}</b>${desc}<br>Si no peleas, caes en <b>${hr<1?Math.round(hr*60)+' min':'~'+Math.round(hr)+' h'}</b> · en pie hace ${dias} ${dias===1?'día':'días'} · caídas: ${h.caidas||0}`;
+    const pendHoy=hayPendientesEn(siguientePunto(ahora));
+    if(!pendHoy&&!pgT)info=`<b>Sin demonios en pie.</b> No pierdes vida mientras no tengas a quién vencer${desc}<br>En pie hace ${dias} ${dias===1?'día':'días'} · caídas: ${h.caidas||0}`;
+    else{const pg=pgT?new Date(pgT).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'}):'—';
+    info=`${pendHoy?`Pierdes <b>${h.drenaje} %</b> a cada hora en punto · próximo golpe a las <b>${pg}</b>`:`<b>Hoy ya no queda nadie en pie.</b> Mañana vuelven: próximo golpe a las <b>${pg}</b>`}${desc}<br>Si no peleas, caes en <b>${hr<1?Math.round(hr*60)+' min':'~'+Math.round(hr)+' h'}</b> · en pie hace ${dias} ${dias===1?'día':'días'} · caídas: ${h.caidas||0}`}
   }
   const SB=setBatalla(),peligroH=D0(SB),D=diasBatalla(),mejor=mejorRachaDe(setBatalla()),L=nivelDe(D),base=umbral(L),sig=umbral(L+1),xp=(D-base)/(sig-base)*100;
   return `<article class="card heroe ${pct<=25?'bajo':''} ${caido?'caido-h':''} ${L>=7?'aura':''}" id="heroe-card"><div class="flash"></div>
@@ -540,16 +550,30 @@ const BONO_FURIA=[0,0.25,0.5];
 const vidaHoy=r=>{if(r.tipo==='jefe')return r.vida;const f=furia(r);if(!f)return r.vida;const v=r.vida*(1+BONO_FURIA[f]);return Number.isInteger(r.vida)?Math.ceil(v):r2(v)};
 const vidaDia=(r,k)=>(!k||k===hoy())?vidaHoy(r):r.vida;
 const restante=(r,k)=>Math.max(0,r2(vidaDia(r,k)-danoDe(r,k)));
+/* archivado: el rival sale de la batalla pero conserva su historial */
+const archivado=r=>!!r.archivado||(r.tipo==='jefe'&&!!r.caidoEn&&r.caidoEn<hoy());
+const enBatalla=r=>!r.archivado&&!(r.tipo==='jefe'&&r.caidoEn);
+/* ¿este rival sigue pidiendo pelea en la hora en punto t? (para la vida del héroe y los avisos) */
+function pendienteEn(r,t){
+  if(r.creadoT&&t<r.creadoT)return false;
+  if(r.archivado&&(!r.archivadoT||t>=r.archivadoT))return false;
+  const d=new Date(t-60000),kk=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  if(r.creado&&kk<r.creado)return false;
+  const x=(r.dias||{})[kk]||0;
+  if(r.tipo==='jefe'){if(r.caidoEn&&r.caidoEn<=kk)return false;const q=cuota(r,kk);return q>0?x<q:true}
+  return x<vidaDia(r,kk);
+}
+const hayPendientesEn=t=>S.rivales.some(r=>pendienteEn(r,t));
 /* némesis: historial de quién fue el némesis desde qué día */
 function nemesisEn(k){let e=null;for(const x of (S.nemesis||[]))if(x.desde<=k)e=x;return e&&e.id?e:null}
-function nemesisHoy(){const e=nemesisEn(hoy());return e?S.rivales.find(x=>x.id===e.id)||null:null}
+function nemesisHoy(){const e=nemesisEn(hoy());const r=e?S.rivales.find(x=>x.id===e.id)||null:null;return r&&!r.archivado?r:null}
 const esNemesis=r=>{const n=nemesisHoy();return !!n&&n.id===r.id};
 function hayVictoria(k){for(const r of S.rivales){if(r.tipo==='jefe'){if(r.caidoEn===k||guardiaVencida(r,k))return true}else if(((r.dias||{})[k]||0)>=vidaDia(r,k))return true}return false}
 function cumpleNemesis(r,k){if(r.tipo==='jefe'){if(r.caidoEn===k)return true;if(cuota(r,k)>0)return guardiaVencida(r,k);return ((r.dias||{})[k]||0)>0}return ((r.dias||{})[k]||0)>=vidaDia(r,k)}
 function diaCuenta(k){
   const e=nemesisEn(k);if(!e)return hayVictoria(k);
   const r=S.rivales.find(x=>x.id===e.id);
-  if(!r||(r.tipo==='jefe'&&r.caidoEn&&r.caidoEn<k))return hayVictoria(k);
+  if(!r||(r.tipo==='jefe'&&r.caidoEn&&r.caidoEn<k)||(r.archivado&&r.archivado<=k))return hayVictoria(k);
   return cumpleNemesis(r,k);
 }
 const vencidoHoy=r=>restante(r)<=0;
@@ -671,11 +695,11 @@ function deshacer(id){
   else{r.dano=Math.max(0,r2((r.dano||0)-u.n));if(r.dias&&r.dias[u.d]){r.dias[u.d]=Math.max(0,r2(r.dias[u.d]-u.n));if(!r.dias[u.d])delete r.dias[u.d]}if(restante(r)>0)r.caidoEn=null}
   guardar();
 }
-function revivir(id){const r=S.rivales.find(x=>x.id===id);if(!r)return;r.caidoEn=null;r.dano=0;r.hist=[];guardar()}
+function revivir(id){const r=S.rivales.find(x=>x.id===id);if(!r)return;r.caidoEn=null;r.dano=0;r.hist=[];delete r.archivado;delete r.archivadoT;r.creadoT=Date.now();guardar()}
 
 /* ---------- etiquetas ---------- */
 const normEt=t=>t.trim().toLowerCase().replace(/\s+/g,' ').slice(0,24);
-function todasEtiquetas(){const m={};for(const r of S.rivales)for(const t of (r.etiquetas||[]))m[t]=(m[t]||0)+1;return Object.keys(m).sort((a,b)=>m[b]-m[a]||a.localeCompare(b))}
+function todasEtiquetas(){const m={};for(const r of S.rivales.filter(enBatalla))for(const t of (r.etiquetas||[]))m[t]=(m[t]||0)+1;return Object.keys(m).sort((a,b)=>m[b]-m[a]||a.localeCompare(b))}
 const pasaFiltro=r=>!filtro||(r.etiquetas||[]).includes(filtro);
 function filtrosHTML(){const ts=todasEtiquetas();if(!ts.length)return'';if(filtro&&!ts.includes(filtro))filtro=null;
   return `<button class="chip ${!filtro?'on':''}" data-act="filtro" data-t="">Todos</button>`+ts.map(t=>`<button class="chip ${filtro===t?'on':''}" data-act="filtro" data-t="${esc(t)}">${esc(t)}</button>`).join('')}
@@ -713,9 +737,23 @@ function renderTrofeos(){
     $('dia-detalle').innerHTML=`<h4>${fechaLarga(diaSel)}</h4>`+(ts.length?ts.map(t=>`<div class="trofeo"><div class="placa">${spriteSVG(t.guardia?ESBIRRO:spriteDe(t.r),0)}</div><div><div class="t1">${esc(t.guardia?'Guardia de '+t.r.nombre:t.etapa?t.etapa:t.r.nombre)}</div><div class="t2">${t.guardia?'Guardia vencida':t.etapa?'Etapa vencida de '+esc(t.r.nombre):t.r.tipo==='jefe'?'Jefe derrotado':'Vencido ese día'} · ${fmt(t.cant)} ${esc(t.r.unidad)}</div></div></div>`).join(''):'<p class="sin">Ese día no cayó nadie.</p>');
   }else $('dia-detalle').innerHTML='';
 }
-function vista(){return location.hash==='#trofeos'?'trofeos':'batalla'}
+function vista(){return location.hash==='#trofeos'?'trofeos':location.hash==='#historial'?'historial':'batalla'}
+function victoriasRival(r){let n=0;if(r.tipo==='jefe'){if(r.caidoEn)n++;for(const k in (r.dias||{}))if(k!==r.caidoEn&&guardiaVencida(r,k))n++}else for(const k in (r.dias||{}))if(r.dias[k]>=vidaDia(r,k))n++;return n}
+function renderHistorial(){
+  const items=S.rivales.filter(archivado).map(r=>({r,f:r.archivado||r.caidoEn})).sort((a,b)=>a.f<b.f?1:-1);
+  if(!items.length){$('historial').innerHTML=`<div class="vacio"><p>Aquí quedan los jefes que derrotaste y los rivales que archives.</p></div>`;return}
+  $('historial').innerHTML=items.map(({r})=>{
+    const cayo=r.tipo==='jefe'&&r.caidoEn,v=victoriasRival(r);
+    const ds=Object.keys(r.dias||{}).sort(),desde=r.creado||ds[0];
+    const mr=r.tipo==='diario'?mejorRachaDe(ds.filter(k=>r.dias[k]>=vidaDia(r,k))):mejorRachaDe(ds.filter(k=>guardiaVencida(r,k)));
+    return `<div class="hist-item" data-id="${r.id}"><div class="sprite">${spriteSVG(spriteDe(r),cayo?2:0)}</div><div class="hi">
+      <div class="n">${esc(r.nombre)}</div>
+      <div class="f">${cayo?`Jefe derrotado el ${fechaLarga(r.caidoEn)} · ${fmt(r.vida)} ${esc(r.unidad)}`:`${r.tipo==='jefe'?'Jefe':'Rival diario'} · archivado el ${fechaLarga(r.archivado)}`}<br>${desde?'Desde el '+fechaLarga(desde)+' · ':''}${v} ${v===1?'victoria':'victorias'}${mr?' · mejor racha '+mr:''}</div></div>
+      <div class="hb">${cayo?'<button data-act="revivir">Revivir</button>':'<button data-act="restaurar">Restaurar</button>'}<button data-act="borrar" class="peligro">Borrar</button></div></div>`;
+  }).join('');
+}
 function aplicarVista(){
-  const v=vista();$('vista-batalla').hidden=v!=='batalla';$('vista-trofeos').hidden=v!=='trofeos';
+  const v=vista();$('vista-batalla').hidden=v!=='batalla';$('vista-trofeos').hidden=v!=='trofeos';$('vista-historial').hidden=v!=='historial';
   document.querySelectorAll('.pestanas a').forEach(a=>a.classList.toggle('on',a.dataset.tab===v));
 }
 window.addEventListener('hashchange',()=>{aplicarVista();render()});
@@ -728,15 +766,16 @@ function render(){
   $('fecha').textContent=new Date().toLocaleDateString('es-EC',{weekday:'long',day:'numeric',month:'short'});
   aplicarVista();
   if(vista()==='trofeos'){renderTrofeos();return}
+  if(vista()==='historial'){renderHistorial();return}
   $('filtros').innerHTML=filtrosHTML();
-  const vivos=S.rivales.filter(r=>!(r.tipo==='jefe'&&r.caidoEn)&&pasaFiltro(r));
-  const caidos=S.rivales.filter(r=>r.tipo==='jefe'&&r.caidoEn&&pasaFiltro(r)).sort((a,b)=>a.caidoEn<b.caidoEn?1:-1);
+  const vivos=S.rivales.filter(r=>enBatalla(r)&&pasaFiltro(r));
+  const caidos=S.rivales.filter(r=>r.tipo==='jefe'&&r.caidoEn===hoy()&&!r.archivado&&pasaFiltro(r));
   let h='';
   if(S.rivales.length&&!vivos.length&&filtro){
     h+=`<div class="vacio"><p>No hay rivales en pie con la etiqueta «${esc(filtro)}».</p></div>`;
   }
-  if(!S.rivales.length){
-    h+=`<div class="vacio"><p>Todavía no tienes enemigos.<br>Ponle nombre a lo que te cuesta y van a aparecer.</p></div>`;
+  if(!S.rivales.some(enBatalla)&&!filtro){
+    h+=`<div class="vacio"><p>${S.rivales.length?'No tienes demonios en pie.<br>Tus batallas pasadas están en el historial.':'Todavía no tienes enemigos.<br>Ponle nombre a lo que te cuesta y van a aparecer.'}</p></div>`;
   }
   for(const r of vivos){
     const VH=vidaHoy(r),fu=furia(r),nem=esNemesis(r),rest=restante(r),pct=Math.max(0,rest/VH*100),b=burlaDe(r),venc=r.tipo==='diario'&&vencidoHoy(r);
@@ -756,6 +795,7 @@ function render(){
         <button data-act="deshacer" ${r.hist&&r.hist.length?'':'disabled style="opacity:.4"'}>Deshacer último golpe</button>
         <button data-act="nemesis">${nem?'Quitar némesis':'Hacer némesis'}</button>
         <button data-act="editar">Editar</button>
+        <button data-act="archivar">Archivar</button>
         <button data-act="borrar" class="peligro">Borrar</button></div>
     </article>`;
   }
@@ -763,8 +803,9 @@ function render(){
   $('lista').innerHTML=h;
   let c='';
   if(caidos.length){
-    c+=`<h2>Caídos</h2>`;
+    c+=`<h2>Caídos hoy</h2>`;
     for(const r of caidos)c+=`<div class="caido" data-id="${r.id}"><div class="sprite">${sprite(r)}</div><div><div class="n">${esc(r.nombre)}</div><div class="f">${fmt(r.vida)} ${esc(r.unidad)} · cayó el ${fechaLarga(r.caidoEn)}</div></div><button data-act="revivir">Revivir</button></div>`;
+    c+=`<p class="ayuda" style="margin-top:8px">Mañana pasan al historial.</p>`;
   }
   $('caidos').innerHTML=c;
 }
@@ -824,6 +865,8 @@ document.addEventListener('click',e=>{
   else if(act==='borrar'){borrando=id;$('c-nombre').textContent=S.rivales.find(r=>r.id===id).nombre;$('confirmar').classList.add('on')}
   else if(act==='nuevo')abrirForm(null);
   else if(act==='revivir')revivir(id);
+  else if(act==='archivar'){const r=S.rivales.find(x=>x.id===id);if(r){r.archivado=hoy();r.archivadoT=Date.now();if(esNemesis({id})){const H=hoy();S.nemesis=(S.nemesis||[]).filter(x=>x.desde!==H);S.nemesis.push({id:null,desde:H})}abierto=null;guardar()}}
+  else if(act==='restaurar'){const r=S.rivales.find(x=>x.id===id);if(r){delete r.archivado;delete r.archivadoT;r.creadoT=Date.now();guardar()}}
   else if(act==='heroe-editar')abrirHeroe();
   else if(act==='nemesis'){const H=hoy(),ya=esNemesis({id});S.nemesis=(S.nemesis||[]).filter(x=>x.desde!==H);S.nemesis.push({id:ya?null:id,desde:H});abierto=null;guardar()}
   else if(act==='filtro'){filtro=b.dataset.t||null;try{filtro?localStorage.setItem('bestiario.filtro',filtro):localStorage.removeItem('bestiario.filtro')}catch(e){}render()}
@@ -889,7 +932,7 @@ $('form').addEventListener('submit',e=>{
   if(!golpes.length)return $('f-error').textContent='Agrega al menos un golpe rápido.';
   const datos={nombre,epiteto:$('f-epiteto').value.trim(),tipo:tipoSel,vida:r2(vida),unidad:$('f-unidad').value.trim(),golpes,burla:$('f-burla').value.trim(),sprite:spriteSel,fecha:fecha||null,cuotaFija:cuotaFija>0?r2(cuotaFija):null,etapas:etapas.length?etapas:null,etiquetas:[...new Set($('f-etiquetas').value.split(',').map(normEt).filter(Boolean))].slice(0,6)};
   if(editando){const r=S.rivales.find(x=>x.id===editando);Object.assign(r,datos);if(r.tipo==='jefe'&&r.dano==null)r.dano=0;if(r.tipo==='diario'&&!r.dias)r.dias={};if(r.tipo==='jefe'&&restante(r)>0)r.caidoEn=null}
-  else S.rivales.push(Object.assign({id:nid(),creado:hoy(),dias:{},dano:0,hist:[],caidoEn:null},datos));
+  else S.rivales.push(Object.assign({id:nid(),creado:hoy(),creadoT:Date.now(),dias:{},dano:0,hist:[],caidoEn:null},datos));
   $('capa').classList.remove('on');abierto=null;guardar();
 });
 
