@@ -443,7 +443,7 @@ function victoriasDe(h){
 }
 function nemesisLinea(){
   const e=nemesisEn(hoy()),n=nemesisHoy();
-  if(!e||!n)return `<p class="nem-l">Sin némesis, cualquier victoria hace contar el día. Elige uno desde el menú ⋯ de un rival y el día solo contará si cae él.</p>`;
+  if(!e||!n)return `<p class="nem-l">Hoy cualquier rival que venzas suma a tu racha. Si eliges un némesis en el menú ⋯ de un rival, solo sumará vencerlo a él.</p>`;
   if(n.tipo==='jefe'&&n.caidoEn&&n.caidoEn<hoy())return `<p class="nem-l">Tu némesis, ${esc(n.nombre)}, cayó para siempre. Elige otro.</p>`;
   if(cumpleNemesis(n,hoy()))return `<p class="nem-l ok">Tu némesis, ${esc(n.nombre)}, ${n.tipo==='jefe'?'recibió su golpe':'cayó'} hoy. El día cuenta.</p>`;
   return `<p class="nem-l">El día no cuenta hasta que ${n.tipo==='jefe'?'golpees a':'caiga'} <b>${esc(n.nombre)}</b>.</p>`;
