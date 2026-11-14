@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bestiario</title>
+<meta name="description" content="Derrota a tus demonios a diario.">
+<meta name="theme-color" content="#110d0c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bestiario">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=IBM+Plex+Mono:wght@400;500&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#110d0c; --card:#1a1412; --card2:#211915; --line:#3a2c25;
+  --paper:#ece2cc; --dim:#a8998a; --faint:#6f6258;
+  --blood:#b3261e; --blood2:#e0463a; --gold:#c9a24a;
+  --serif:'Cormorant Garamond', Georgia, serif;
+  --mono:'IBM Plex Mono', ui-monospace, monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--ink);color:var(--paper)}
+body{font-family:var(--serif);font-size:18px;line-height:1.35;min-height:100vh;
+  background:radial-gradient(120% 80% at 50% -10%, #2a1a15 0%, var(--ink) 60%) fixed;}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input,select{font:inherit;color:var(--paper)}
+.wrap{max-width:560px;margin:0 auto;padding:calc(28px + env(safe-area-inset-top)) 16px 90px}
+
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:6px}
+h1{font-size:44px;font-weight:600;letter-spacing:.02em;line-height:1}
+h1 span{color:var(--blood2)}
+.fecha{font-family:var(--mono);font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;padding-bottom:6px}
+.lema{font-style:italic;color:var(--dim);margin-bottom:18px}
+.frase{border-left:2px solid var(--gold);padding:4px 0 4px 14px;margin:0 0 26px;cursor:pointer}
+.frase .fq{font-size:19px;font-style:italic;color:#e3d6bd}
+.frase .fa{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--gold);margin-top:6px}
+.frase .fa i{font-style:normal;color:var(--faint)}
+.derrota .frase{max-width:380px;margin:0 auto 28px;text-align:left;cursor:default}
+
+.card{position:relative;background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:14px;padding:18px 18px 16px;margin-bottom:16px;overflow:hidden}
+.card.vencido{border-color:#5a3a1e}
+.top{display:flex;gap:14px;align-items:center}
+.sprite{flex:0 0 68px;height:68px;background:#0c0908;border:2px solid #3a2c25;border-radius:6px;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 2px #0c0908, inset 0 -6px 0 #160f0d}
+.sprite svg{width:48px;height:48px;display:block;animation:respira 1.2s steps(2) infinite}
+@keyframes respira{50%{transform:translateY(-2px)}}
+.bajo .sprite svg{animation-duration:.5s}
+.vencido .sprite svg{animation:none;filter:grayscale(1) brightness(.6);transform:rotate(90deg) translateX(6px)}
+.card.golpeado .sprite svg{animation:recibe .35s steps(4)}
+@keyframes recibe{0%{filter:brightness(5)}25%{transform:translateX(-4px);filter:brightness(5)}50%{transform:translateX(4px);filter:none}75%{transform:translateX(-2px)}100%{transform:none}}
+.ko{font-family:'Press Start 2P',monospace;font-size:9px;color:var(--gold);margin-left:6px;vertical-align:middle}
+.nombre{font-size:26px;font-weight:700;line-height:1.05}
+.epiteto{font-style:italic;color:var(--dim);font-size:16px}
+.tipo{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-top:3px}
+.menu-btn{margin-left:auto;align-self:flex-start;width:34px;height:34px;border-radius:8px;color:var(--dim);font-size:20px;line-height:1}
+.menu-btn:hover{background:#ffffff10}
+
+.vida{margin-top:14px}
+.barra{height:12px;background:#2a1f1b;border-radius:99px;overflow:hidden;border:1px solid #3d2d26}
+.relleno{height:100%;background:linear-gradient(90deg,#7d1812,var(--blood2));border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.bajo .relleno{animation:latido 1.1s ease-in-out infinite}
+@keyframes latido{50%{filter:brightness(1.5)}}
+.nums{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;color:var(--dim);margin-top:6px}
+.nums b{color:var(--paper);font-weight:500}
+.burla{font-style:italic;font-size:19px;margin:12px 0 2px;color:#d9cbb1;min-height:1.3em}
+.burla.ganada{color:var(--gold)}
+.burla.suya{color:#d07a6e}
+
+.golpes{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.g{border:1px solid #6b2620;background:#2a1411;border-radius:10px;padding:9px 14px;font-family:var(--mono);font-size:14px;transition:transform .08s, background .15s}
+.g:hover{background:#3a1813}
+.g:active{transform:scale(.95)}
+.g small{display:block;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#d07a6e}
+.g.otro{border-color:var(--line);background:transparent;color:var(--dim)}
+.otro-form{display:none;gap:8px;margin-top:10px}
+.otro-form.on{display:flex}
+.otro-form input{flex:1;min-width:0;background:#120e0d;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-family:var(--mono);font-size:15px}
+
+.racha{display:flex;align-items:center;justify-content:space-between;margin-top:14px;gap:10px}
+.dias{display:flex;gap:4px}
+.dia{width:13px;height:13px;border-radius:3px;background:#251c18;border:1px solid #33271f}
+.dia.parcial{background:#5a2018;border-color:#6a2a20}
+.dia.ganado{background:var(--blood2);border-color:var(--blood2)}
+.dia.hoy{outline:1px solid var(--gold);outline-offset:1px}
+.racha-n{font-family:var(--mono);font-size:12px;color:var(--dim);white-space:nowrap}
+.racha-n b{color:var(--gold);font-weight:500}
+
+.acciones{display:none;gap:6px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);flex-wrap:wrap}
+.acciones.on{display:flex}
+.acciones button{font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:8px;padding:7px 10px;color:var(--dim)}
+.acciones button:hover{color:var(--paper)}
+.acciones .peligro{color:#d07a6e;border-color:#5a2a24}
+
+.card.golpeado{animation:temblor .35s}
+@keyframes temblor{20%{transform:translateX(-6px) rotate(-.6deg)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+.card .flash{position:absolute;inset:0;background:radial-gradient(circle at 50% 40%,#e0463a55,transparent 70%);opacity:0;pointer-events:none}
+.card.golpeado .flash{animation:flash .45s}
+@keyframes flash{0%{opacity:1}100%{opacity:0}}
+.dano{position:absolute;font-family:'Press Start 2P',monospace;color:var(--blood2);font-size:16px;pointer-events:none;animation:sube .9s ease-out forwards;text-shadow:0 2px 8px #000}
+@keyframes sube{0%{opacity:0;transform:translateY(6px)}15%{opacity:1}100%{opacity:0;transform:translateY(-46px)}}
+
+.heroe{border-color:#2c3f5a;background:linear-gradient(180deg,#18202b,#121820);margin-bottom:28px}
+.heroe .tipo{color:#7fb0ff}
+.heroe .relleno{background:linear-gradient(90deg,#1d4f9a,#4f9cff)}
+.heroe.bajo .relleno{background:linear-gradient(90deg,#7d1812,var(--blood2))}
+.heroe .sprite{border-color:#2c3f5a}
+.heroe.curado{animation:curado .6s}
+@keyframes curado{0%{box-shadow:0 0 0 0 #4f9cffaa}100%{box-shadow:0 0 0 14px #4f9cff00}}
+.heroe.caido-h .sprite svg{animation:none;filter:grayscale(1) brightness(.6);transform:rotate(-90deg) translateX(-6px)}
+.heroe .victorias{position:absolute;right:62px;top:22px;text-align:center;line-height:1}
+.heroe .vn{display:block;font-family:'Press Start 2P',monospace;font-size:20px;color:var(--gold);text-shadow:0 2px 0 #5a3f10}
+.heroe .vt{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-top:6px}
+.heroe.gana .vn{animation:sube-v .7s steps(4)}
+@keyframes sube-v{0%{transform:scale(1.8);color:#fff}100%{transform:none}}
+.xp{margin-top:12px}
+.xp-barra{height:7px;background:#1f2633;border-radius:2px;overflow:hidden;border:1px solid #2c3f5a}
+.xp-barra div{height:100%;background:repeating-linear-gradient(90deg,var(--gold) 0 6px,#e8c870 6px 8px);transition:width .6s steps(8)}
+.xp-t{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:5px}
+.heroe.aura .sprite{border-color:#c9a24a;box-shadow:0 0 18px #ffd24a44, inset 0 0 0 2px #0c0908}
+.alerta-racha{margin-top:10px;font-size:17px;font-style:italic;color:#ff8a6a}
+.riesgo{color:#ff8a6a;font-style:italic;font-size:16px;margin-top:8px;text-align:right}
+.heroe .info{font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:10px;line-height:1.6}
+.heroe .info b{color:#7fb0ff;font-weight:500}
+.heroe .aviso{font-style:italic;font-size:18px;color:#d9cbb1;margin-top:10px}
+.heroe .cura{position:absolute;font-family:'Press Start 2P',monospace;color:#4f9cff;font-size:14px;right:22px;top:64px;pointer-events:none;animation:sube .9s ease-out forwards;text-shadow:0 2px 8px #000}
+.crear-heroe{width:100%;border:1px solid #2c3f5a;background:#121820;border-radius:14px;padding:18px;margin-bottom:28px;text-align:left;display:flex;gap:14px;align-items:center}
+.crear-heroe b{display:block;font-size:22px}
+.crear-heroe span{font-style:italic;color:var(--dim)}
+.pestanas{display:flex;gap:4px;margin:0 0 22px;border-bottom:1px solid var(--line)}
+.pestanas a{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);text-decoration:none;padding:10px 14px;border-bottom:2px solid transparent;margin-bottom:-1px}
+.pestanas a.on{color:var(--paper);border-color:var(--blood2)}
+.filtros{display:flex;flex-wrap:wrap;gap:6px;margin:-6px 0 16px}
+.filtros:empty{display:none}
+.chip{font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;border:1px solid var(--line);border-radius:99px;padding:5px 11px;color:var(--dim)}
+.chip.on{border-color:var(--gold);color:var(--paper);background:#2a2015}
+.etiquetas{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.etiquetas span{font-family:var(--mono);font-size:10.5px;color:var(--faint);border:1px solid #33271f;border-radius:99px;padding:1px 8px}
+.sugeridas{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.sugeridas:empty{display:none}
+.mes-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.mes-nav button{width:40px;height:40px;border:1px solid var(--line);border-radius:10px;font-size:22px;color:var(--dim)}
+.mes-nav button:hover{color:var(--paper)}
+#mes-titulo{font-size:28px;font-weight:600}
+.mes-resumen{text-align:center;font-family:var(--mono);font-size:12px;color:var(--dim);margin-bottom:16px}
+.mes-resumen b{color:var(--gold);font-weight:500}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal .dow{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);text-align:center;padding-bottom:4px}
+.celda{position:relative;min-height:74px;border-radius:8px;background:#1a1412;border:1px solid #2a201b;padding:4px;display:flex;flex-direction:column;cursor:pointer;text-align:left}
+.celda.vacia{background:transparent;border-color:transparent;cursor:default}
+.celda.hoy{border-color:var(--gold)}
+.celda.sel{background:#2a2015;border-color:var(--gold)}
+.celda.futuro{opacity:.4}
+.celda .n{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+.cabezas{display:flex;flex-wrap:wrap;gap:1px;margin-top:3px;align-content:flex-start}
+.cabeza{width:24px;height:30px;display:flex;flex-direction:column;align-items:center}
+.cabeza svg{width:24px;height:24px;display:block}
+.cabeza i{display:block;width:18px;height:5px;background:linear-gradient(#8a5a2e,#5a3618);border-radius:1px;margin-top:-2px;box-shadow:0 1px 0 #2a180a}
+.mas{font-family:var(--mono);font-size:10px;color:var(--gold);align-self:center;padding:0 2px}
+.dia-detalle{margin-top:20px}
+.dia-detalle h4{font-size:22px;font-weight:600;margin-bottom:10px}
+.trofeo{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #261d19}
+.trofeo .placa{width:58px;height:66px;background:radial-gradient(circle at 50% 40%,#3a2616,#1e140c);border:2px solid #5a3a1e;border-radius:28px 28px 8px 8px;display:flex;align-items:center;justify-content:center;flex:0 0 58px}
+.trofeo .placa svg{width:48px;height:48px}
+.trofeo .t1{font-size:20px;font-weight:700}
+.trofeo .t2{font-family:var(--mono);font-size:11.5px;color:var(--faint)}
+.sin{font-style:italic;color:var(--faint);padding:8px 0}
+@media (max-width:420px){.celda{min-height:64px;padding:3px}.cabeza{width:18px;height:23px}.cabeza svg{width:18px;height:18px}.cabeza i{width:14px;height:4px}}
+.card.nemesis{border-color:#8a2a1e;box-shadow:0 0 0 1px #8a2a1e inset, 0 6px 30px #b3261e22}
+.nem-t{color:var(--blood2)}
+.furia-t{font-family:'Press Start 2P',monospace;font-size:8.5px;color:#ff6a3a;margin-top:6px;letter-spacing:.04em}
+.card.furia1 .sprite{border-color:#8a3a1a;box-shadow:0 0 14px #ff5a2a55, inset 0 0 0 2px #0c0908}
+.card.furia1 .sprite svg{filter:saturate(1.5) drop-shadow(0 0 2px #ff5a2a);transform:scale(1.08)}
+.card.furia2 .sprite{border-color:#c0281e;box-shadow:0 0 22px #ff3a1a99, inset 0 0 0 2px #0c0908}
+.card.furia2 .sprite svg{filter:saturate(1.8) hue-rotate(-12deg) drop-shadow(0 0 3px #ff2a1a);transform:scale(1.18);animation-duration:.45s}
+.nem-l{margin-top:12px;font-size:17px;font-style:italic;color:#d9cbb1;border-left:2px solid var(--blood);padding-left:10px}
+.nem-l b{font-style:normal;color:var(--blood2)}
+.nem-l.ok{color:var(--gold);border-color:var(--gold)}
+.nuevo{width:100%;border:1px dashed #5a463b;border-radius:14px;padding:16px;color:var(--dim);font-size:19px;font-style:italic}
+.nuevo:hover{color:var(--paper);border-color:var(--gold)}
+
+h2{font-size:15px;font-family:var(--mono);font-weight:400;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:40px 0 12px;display:flex;align-items:center;gap:10px}
+h2::after{content:"";flex:1;height:1px;background:var(--line)}
+.caido{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid #261d19}
+.caido .sprite{flex-basis:44px;height:44px;opacity:.6;filter:grayscale(1)}
+.caido .sprite svg{width:24px;height:24px;animation:none}
+.caido .n{font-size:19px;text-decoration:line-through;text-decoration-color:var(--blood);text-decoration-thickness:2px}
+.caido .f{font-family:var(--mono);font-size:11.5px;color:var(--faint)}
+.caido button{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint)}
+
+.vacio{text-align:center;padding:30px 10px 10px;color:var(--dim)}
+.vacio p{font-style:italic;font-size:20px;margin-bottom:18px}
+
+.estado{cursor:pointer;border:1px solid var(--line);z-index:5;position:fixed;left:50%;bottom:14px;transform:translateX(-50%);font-family:var(--mono);font-size:11px;color:var(--faint);background:#110d0ccc;padding:4px 10px;border-radius:99px;backdrop-filter:blur(4px)}
+
+/* modal */
+.capa{position:fixed;inset:0;background:#070505e6;display:none;align-items:center;justify-content:center;padding:18px;z-index:10}
+.capa.on{display:flex}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;width:100%;max-width:480px;max-height:92vh;overflow:auto;padding:22px}
+.panel h3{font-size:28px;font-weight:600;margin-bottom:4px}
+.panel .sub{color:var(--dim);font-style:italic;margin-bottom:16px}
+label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:12px 0 5px}
+.panel input,.panel select{width:100%;background:#120e0d;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:17px}
+.panel input:focus,.panel select:focus,.otro-form input:focus{outline:none;border-color:var(--gold)}
+.fila{display:flex;gap:10px}
+.golpes-f input{flex:1;min-width:0;font-family:var(--mono)}.fila>div{flex:1}
+.tipos{display:flex;gap:8px}
+.tipos button{flex:1;border:1px solid var(--line);border-radius:10px;padding:10px;text-align:left;font-size:17px}
+.tipos button small{display:block;font-size:13.5px;font-style:italic;color:var(--dim)}
+.tipos button.sel{border-color:var(--gold);background:#2a2015}
+.ayuda{font-size:14px;color:var(--faint);font-style:italic;margin-top:4px}
+.btns{display:flex;gap:10px;margin-top:22px}
+.btn{flex:1;border-radius:10px;padding:12px;font-size:18px;font-weight:600;border:1px solid var(--line)}
+.btn.pri{background:var(--blood);border-color:var(--blood);color:#fff}
+.btn.pri:hover{background:var(--blood2)}
+.aspectos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.aspectos button{background:#0c0908;border:2px solid var(--line);border-radius:8px;padding:6px;aspect-ratio:1;display:flex;align-items:center;justify-content:center}
+.aspectos button svg{width:100%;height:100%}
+.aspectos button.sel{border-color:var(--gold);background:#1e170f}
+.error{color:var(--blood2);font-size:15px;margin-top:10px;min-height:1em}
+
+/* derrota */
+.derrota{position:fixed;inset:0;background:radial-gradient(circle at 50% 45%,#3a0f0bf2,#070404fa 70%);display:none;align-items:center;justify-content:center;z-index:20;padding:30px;text-align:center}
+.derrota.on{display:flex;animation:aparece .5s ease-out}
+@keyframes aparece{from{opacity:0}to{opacity:1}}
+.derrota .k{font-family:var(--mono);font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold)}
+.derrota .sprite{width:132px;height:132px;margin:22px auto;animation:cae 1s cubic-bezier(.3,.6,.2,1)}
+.derrota .sprite svg{width:96px;height:96px;animation:none;filter:grayscale(.85) brightness(.8)}
+@keyframes cae{from{transform:scale(1.4) rotate(-8deg);opacity:0}to{transform:none;opacity:1}}
+.derrota .n{font-size:46px;font-weight:700;line-height:1;text-decoration:line-through;text-decoration-color:var(--blood2);text-decoration-thickness:3px}
+.derrota .e{font-style:italic;font-size:22px;color:#d9cbb1;margin:16px auto 30px;max-width:380px}
+.derrota .btn{max-width:220px;margin:0 auto}
+.derrota.sube .n{text-decoration:none;color:var(--gold);font-size:40px}
+.derrota.sube .sprite svg{filter:none}
+.derrota.sube .sprite{border-color:var(--gold);box-shadow:0 0 40px #c9a24a55}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Bestiario<span>.</span></h1>
+    <div class="fecha" id="fecha"></div>
+  </header>
+  <p class="lema">Derrota a tus demonios a diario.</p>
+  <blockquote class="frase" id="frase" title="Toca para otra frase"></blockquote>
+  <nav class="pestanas"><a href="#" data-tab="batalla">Batalla</a><a href="#trofeos" data-tab="trofeos">Trofeos</a></nav>
+  <div id="vista-batalla">
+    <section id="heroe"></section>
+    <div class="filtros" id="filtros"></div>
+    <main id="lista"></main>
+    <section id="caidos"></section>
+  </div>
+  <div id="vista-trofeos" hidden>
+    <div class="filtros" id="filtros-t"></div>
+    <div class="mes-nav"><button data-act="mes-prev" aria-label="Mes anterior">‹</button><div id="mes-titulo"></div><button data-act="mes-next" aria-label="Mes siguiente">›</button></div>
+    <div class="mes-resumen" id="mes-resumen"></div>
+    <div class="cal" id="cal"></div>
+    <div class="dia-detalle" id="dia-detalle"></div>
+  </div>
+</div>
+<button type="button" class="estado" id="estado" title="Cuenta y respaldos">…</button>
+
+<div class="capa" id="capa">
+  <form class="panel" id="form" autocomplete="off">
+    <h3 id="f-titulo">Nuevo rival</h3>
+    <p class="sub" id="f-sub">Ponle nombre a lo que tienes que vencer.</p>
+    <label>Aspecto</label>
+    <div class="aspectos" id="aspectos"></div>
+    <label for="f-nombre">Nombre</label>
+    <input id="f-nombre" maxlength="40" placeholder="Nombre del rival">
+    <label for="f-epiteto">Epíteto (opcional)</label>
+    <input id="f-epiteto" maxlength="60" placeholder="Un apodo que lo describa">
+    <label>Tipo de rival</label>
+    <div class="tipos">
+      <button type="button" data-tipo="diario">Diario<small>Revive cada mañana</small></button>
+      <button type="button" data-tipo="jefe">Jefe<small>Se vence una sola vez</small></button>
+    </div>
+    <div class="fila">
+      <div><label for="f-vida">Vida</label><input id="f-vida" inputmode="decimal" placeholder="Ej.: 30"></div>
+      <div><label for="f-unidad">Unidad</label><input id="f-unidad" maxlength="12" placeholder="minutos, páginas…"></div>
+    </div>
+    <label for="f-g1">Golpes rápidos</label>
+    <div class="fila golpes-f"><input id="f-g1" inputmode="decimal" placeholder="Ej.: 5"><input id="f-g2" inputmode="decimal" placeholder="10"><input id="f-g3" inputmode="decimal" placeholder="—"></div>
+    <p class="ayuda">Los botones que vas a tocar cada día. Llena uno, dos o tres.</p>
+    <label for="f-etiquetas">Etiquetas (opcional)</label>
+    <input id="f-etiquetas" maxlength="80" placeholder="salud, lectura, trabajo">
+    <div class="sugeridas" id="f-sugeridas"></div>
+    <label for="f-burla">Su burla (opcional)</label>
+    <input id="f-burla" maxlength="100" placeholder="Lo que te diría si pudiera hablar">
+    <p class="error" id="f-error"></p>
+    <div class="btns">
+      <button type="button" class="btn" id="f-cancelar">Cancelar</button>
+      <button type="submit" class="btn pri" id="f-ok">Invocar</button>
+    </div>
+  </form>
+</div>
+
+<div class="capa" id="capa-h">
+  <form class="panel" id="form-h" autocomplete="off">
+    <h3 id="h-titulo">Tu personaje</h3>
+    <p class="sub">Pierde vida con cada hora que pasa. Cada golpe que das lo cura.</p>
+    <label for="h-nombre">Nombre</label>
+    <input id="h-nombre" maxlength="30" placeholder="Antonio">
+    <label for="h-drenaje">Vida que pierdes por hora</label>
+    <select id="h-drenaje"><option value="2">2 % · paciente</option><option value="3">3 %</option><option value="4">4 % · recomendado</option><option value="5">5 %</option><option value="6">6 % · exigente</option><option value="8">8 % · espartano</option></select>
+    <label>Horas de descanso (no pierdes vida)</label>
+    <div class="fila"><div><select id="h-ini"></select></div><div><select id="h-fin"></select></div></div>
+    <p class="ayuda">Desde la primera hora hasta la segunda.</p>
+    <p class="error" id="h-error"></p>
+    <div class="btns">
+      <button type="button" class="btn" id="h-cancelar">Cancelar</button>
+      <button type="submit" class="btn pri" id="h-ok">Empezar</button>
+    </div>
+  </form>
+</div>
+
+<div class="capa" id="confirmar">
+  <div class="panel">
+    <h3>¿Borrar a <span id="c-nombre"></span>?</h3>
+    <p class="sub">Se borra con todo su historial y no cuenta como victoria.</p>
+    <div class="btns">
+      <button class="btn" id="c-no">Mejor no</button>
+      <button class="btn pri" id="c-si">Borrar</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="capa" id="capa-cuenta">
+  <div class="panel">
+    <h3>Tu cuenta</h3>
+    <div id="cuenta-cuerpo"></div>
+    <p class="error" id="cu-error"></p>
+    <label>Respaldos</label>
+    <div class="btns" style="margin-top:6px"><button type="button" class="btn" data-cu="exportar">Exportar</button><button type="button" class="btn" data-cu="importar">Importar</button></div>
+    <input type="file" id="cu-archivo" accept="application/json,.json" hidden>
+    <div class="btns"><button type="button" class="btn" id="cu-cerrar">Cerrar</button></div>
+  </div>
+</div>
+
+<div class="derrota" id="derrota">
+  <div>
+    <div class="k" id="d-k">Ha caído</div>
+    <div class="sprite" id="d-sprite"></div>
+    <div class="n" id="d-n"></div>
+    <p class="e" id="d-e"></p>
+    <blockquote class="frase" id="d-frase"></blockquote>
+    <button class="btn pri" id="d-ok">Seguir</button>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="supabase.js"></script>
+<script>
+(function(){
+const KEY='bestiario.v1';
+let S={v:1,rivales:[],actualizado:0};
+let filtro=null, mesVista=null, diaSel=null;
+try{filtro=localStorage.getItem('bestiario.filtro')||null}catch(e){}
+let abierto=null, otroAbierto=null, editando=null, tipoSel='diario', borrando=null, spriteSel=null;
+const SPRITES=[{"id":"hidra","pal":{"k":"#0e140c","g":"#3f8f6a","G":"#25604a","l":"#a8d68a","r":"#ff3a2a","w":"#f4f0e0"},"px":["........................","..kkkk....kkkk....kkkk..",".kggggk..kggggk..kggggk.","kgrggrgkkgrggrgkkgrggrgk","kggggggkkggggggkkggggggk","kgkwwkgkkgkwwkgkkgkwwkgk",".kgkkgk..kgkkgk..kgkkgk.","..kGgk....kGgk....kGgk..","..kGgk....kGgk....kGgk..","...kGgk...kGgk...kGgk...","...kGgk...kGgk...kGgk...","....kGgk..kGgk..kGgk....","....kGggk.kGgk.kGggk....",".....kGggkkGgkkGggk.....","......kGgggGgggGggk.....",".....kGgggggggggggggk...","....kGggglllllllgggggk..","...kGgggllllllllllgggk..","...kGggglllllllllggggk..","..kGGgggglllllllgggggGk.","..kGGGgggggggggggggGGGk.","...kkGGGGggggggGGGGkk...",".....kkkkkkkkkkkkkk.....","........................"]},{"id":"medusa","pal":{"k":"#140b10","s":"#9cc79a","S":"#5f9068","h":"#4f9a3e","H":"#2c6428","l":"#a6dc6e","y":"#ffd23a","r":"#b52a2a","v":"#5a2f7a","V":"#3a1c52"},"px":["........................","...kk..............kk...","..khlk...kk..kk...klhk..","..khhk..khlkklhk..khhk..","...khhk.khhkkhhk.khhk...",".kk.khhkkhhkkhhkkhhk.kk.","khlk.khhhhHkkHhhhhk.klhk","khhhkkhHkkkkkkkkHhkkhhhk",".kkhhhHksssSSssskHhhhkk.","..khhHksssssssssskHhhk..",".khhHksssssssssssskHhhk.","khhHksssssssssssssskHhhk","khHkSsskkksssskkkssSkHhk","kHkSsskyyyksskyyykssSkHk",".kkSssskkksssskkksssSkk.","..kSSssssssssssssssSSk..","...kSssssssssssssssSk...","...kSssssskrrksssssSk...","....kSssssskksssssSk....",".....kkSssssssssSkk.....",".......kkSssssSkk.......",".....kkvvvvvvvvvvkk.....","...kkvvVvvvvvvvvVvvkk...","..kkkkkkkkkkkkkkkkkkkk.."]},{"id":"minotauro","pal":{"k":"#140a06","w":"#f0e6cc","W":"#b8a888","b":"#7a4a2a","B":"#4e2c16","l":"#b07a50","r":"#ff3a2a","y":"#e8b830"},"px":["........................","k......................k","kwk..................kwk","kwWk................kWwk",".kwWk..............kWwk.",".kwwWk............kWwwk.","..kwWWkkkkkkkkkkkkWWwk..","...kkwkbbbbbbbbbbkwkk...","....kkbbbbbbbbbbbbkk....","..kkbbBbbbbbbbbbbBbbkk..",".kbbkbbbbbbbbbbbbbbkbbk.",".kbbbkbbbbbbbbbbbbkbbbk.","..kkkbbkrrkbbkrrkbbkkk..","....kbbbkkbbbbkkbbbk....","....kbbbbbbbbbbbbbbk....","....kBbbbbllllbbbbBk....","....kBbblllkklllbbBk....","....kBblkkllllkklbBk....","....kBblyllllllylbBk....",".....kBblyllllylbBk.....","......kkllyyyyllkk......",".......kkkkkkkkkk.......",".....kkbbbbbbbbbbkk.....","....kbbBbbbbbbbbBbbk...."]},{"id":"ciclope","pal":{"k":"#170c06","s":"#d9a066","S":"#a06a38","h":"#3a2416","w":"#f4efe4","i":"#3a7ad0","n":"#0a0a14","r":"#6a1a14","t":"#f0e8d0"},"px":["........................","........kkkkkkkk........","......kksssssssskk......",".....kssssssssssssk.....","....kSssssssssssssSk....","...kSssssssssssssssSk...","...kSsshhhhhhhhhhssSk...","..kSsskkkkkkkkkkkkssSk..","..kSsskwwwwwwwwwwkssSk..",".kkSskwwwiiiiiiwwwksSkk.","kssSskwwiinnnniiwwksSssk","kSsSskwwiinnnniiwwksSsSk",".kkSskwwwiiiiiiwwwksSkk.","..kSsskwwwwwwwwwwkssSk..","..kSssskkkkkkkkkksssSk..","..kSssssssssssssssssSk..","...kSssssskkkksssssSk...","...kSsssskrrrrkssssSk...","...kSssskrtrrtrksssSk...","....kSsskrrrrrrkssSk....",".....kSsskkkkkkssSk.....","......kkSssssssSkk......","........kkkkkkkk........","........................"]},{"id":"talos","pal":{"k":"#170d05","b":"#c98a3a","B":"#7e521c","l":"#f2c878","c":"#ff8a2a","C":"#ffe08a","r":"#c0281e","R":"#7a120c"},"px":[".........krrrrk.........","........krrRRrrk........","........krrRRrrk........",".......kkrrRRrrkk.......",".....kkbbkkkkkkbbkk.....","....kblbbbbbbbbbblbk....","...kbllbbbbbbbbbbllbk...","...kblbbbbbbbbbbbblbk...","..kbbbbBBBBBBBBBBbbbbk..","..kbbbkkkkkbbkkkkkbbbk..","..kbbkcCckkbbkkcCckbbk..","..kbbkkkkkkbbkkkkkkbbk..","..kbbbbbkkkbbkkkbbbbbk..","..kBbbbbbkkbbkkbbbbbBk..","..kBbbbbbkkbbkkbbbbbBk..","..kBbbbbbkkbbkkbbbbbBk..","...kBbbbbbbbbbbbbbbBk...","....kBbbbbbbbbbbbbBk....",".....kkkkkkkkkkkkkk.....","......kBbbbbbbbbBk......","...kkkkbbbbbbbbbbkkkk...","..kbbbBbbbbbbbbbbBbbbk..",".kblbbbBbbbbbbbbBbbblbk.",".kbbbbbbBbbbbbbBbbbbbbk."]},{"id":"esfinge","pal":{"k":"#150c06","s":"#e8b884","S":"#b07a4a","y":"#e2b232","Y":"#a87a18","b":"#2a5aa8","e":"#24140a","r":"#a03028"},"px":["........................","..........kkkk..........","........kkyyyykk........","......kkyyyyyyyykk......",".....kybbbbbbbbbbyk.....","....kyyyyyyyyyyyyyyk....","....kbbbkkkkkkkkbbbk....","...kyyyksssssssskyyyk...","...kbbbksssssssskbbbk...","...kyyyksssssssskyyyk...","..kbbbkSskkkkkksSkbbbk..","..kyyykSkeksskekSkyyyk..","..kbbbkSssssssssSkbbbk..","..kyyykSssskksssSkyyyk..","..kbbbkSssssssssSkbbbk..","..kyyykSSssssssSSkyyyk..","..kbbbkkSsrrrrsSkkbbbk..","..kyyyykkSssssSkkyyyyk..","..kbbbbbkkkkkkkkbbbbbk..","..kYyyyyyykyykyyyyyyYk..","..kbbbbbbkyyyykbbbbbbk..","...kYyyyyykyykyyyyyYk...","....kkkkkkkyykkkkkkk....","........kkkkkkkk........"]},{"id":"arpia","pal":{"k":"#140c10","f":"#7a5a3a","F":"#4a3420","l":"#b08a5a","s":"#d8b0a8","S":"#a07a72","h":"#2a1a2a","y":"#ffd23a","t":"#e8d8b8"},"px":["........................","........................","........kkkkkkkk........","k......khhhhhhhhk......k","fk....khhhhhhhhhhk....kf","ffk..khhsssssssshhk..kff","fFfk.khsssssssssshk.kfFf","fFffkkhskyksskykshkkffFf","ffFffkhsssssssssshkffFff","fffFfkhsssssssssshkfFfff","lffFffkhSsskkssShkffFffl",".lffFfkkSssssssSkkfFffl.","..lffFkfkkkkkkkkfkFffl..","...lfFkffffffffffkFfl...","....lFkfllllllllfkFl....",".....kkflfllllflfkk.....",".....kfflfllllflffk.....","......kffllllllffk......","......kffkkkkkkffk......",".......kfk....kfk.......","......ktkt....tktk......",".....kt.kt....tk.tk.....","........................","........................"]},{"id":"caronte","pal":{"k":"#0c0810","c":"#2e2440","C":"#120d1a","l":"#4a3c62","w":"#e6dcc4","W":"#a89c84","e":"#5ad0ff"},"px":["........................",".........kkkkkk.........",".......kkcccccckk.......","......kcclcccclcck......",".....kcclcccccclcck.....","....kcclccCCCCcclcck....","....kclccCCCCCCcclck....","...kcclcCCwwwwCCclcck...","...kclcCwwwwwwwwCclck...","..kcclcCwkkkkkkwCclcck..","..kclccCwkekkekwCcclck..","..kclccCwwwwwwwwCcclck..","..kclccCWwwkkwwWCcclck..","..kclccCCwwwwwwCCcclck..","..kclcccCwkwwkwCccclck..","..kclcccCCWWWWCCccclck..",".kcclccccCCCCCCcccclcck.",".kclcccccccccccccccclck.",".kclcccccccccccccccclck.","kcclcccccccccccccccclcck","kclcccccccccccccccccclck","kclcccccCccccccCccccclck","kcCCCCCCCCCCCCCCCCCCCCck","kkkkkkkkkkkkkkkkkkkkkkkk"]}];
+
+/* ---------- utilidades ---------- */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const r2=n=>Math.round(n*100)/100;
+const fmt=n=>Number(n).toLocaleString('es-EC',{maximumFractionDigits:2});
+function claveDia(off){const d=new Date();d.setDate(d.getDate()-(off||0));return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+const hoy=()=>claveDia(0);
+function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+const elegir=(arr,semilla)=>arr[hash(semilla)%arr.length];
+const nid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function fechaLarga(k){const [y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString('es-EC',{day:'numeric',month:'long',year:'numeric'})}
+
+/* ---------- textos ---------- */
+const ANIMOS={
+  inicio:["Lo único que depende de ti ahora es el primer golpe.","No esperes las ganas. Empieza, y llegarán detrás.","El obstáculo es el camino. Empieza por aquí.","Hoy todavía está entero. Tú decides cuánto le dura.","Nadie va a hacerlo por ti, y eso es una buena noticia."],
+  golpe:["Hiciste lo que dependía de ti. Sigue.","Así crece el higo: despacio y sin pedir permiso.","Se camina caminando. Acabas de dar un paso.","Menos discurso, más obra. Eso fue obra.","Ese golpe ya nadie te lo quita.","Nadie te aplaudió y lo hiciste igual. Eso es carácter.","Usaste bien un pedazo de tu tiempo.","La disciplina es esto mismo, repetido mañana.","Un golpe no cambia el día. Muchos cambian la vida.","Lo difícil era empezar, y ya empezaste."],
+  casi:["Termina lo que empezaste.","Está cerca. No negocies contigo mismo.","Un último esfuerzo. Lo demás no depende de ti.","El cansancio es real. Tu decisión también."],
+  vencido:["Hecho. Descansa sin culpa y vuelve mañana.","Ganaste hoy. Guárdalo en silencio.","Cumpliste con tu parte. Eso basta por hoy."]
+};
+const GANADO_HOY=["{n} se queda en el piso hasta mañana.","Hoy le ganaste. {n} se levanta mañana con hambre.","{n} queda fuera de combate hasta la medianoche."];
+const EPITAFIOS=["Lo venciste a punta de peleas chiquitas.","Llevaba semanas cayéndose y hoy por fin tocó el suelo.","Fuiste el único que lo vio caer.","Ya no te va a estar esperando."];
+const FRASES=[
+  ["Al amanecer, cuando te cueste levantarte, piensa: me levanto para hacer el trabajo de un ser humano.","Marco Aurelio","Meditaciones V, 1"],
+  ["Lo que impide la acción hace avanzar la acción. Lo que se interpone en el camino se vuelve el camino.","Marco Aurelio","Meditaciones V, 20"],
+  ["Deja ya de discutir cómo debe ser un hombre bueno, y sé uno.","Marco Aurelio","Meditaciones X, 16"],
+  ["No vivas como si fueras a vivir diez mil años. Mientras vives, mientras puedes, sé bueno.","Marco Aurelio","Meditaciones IV, 17"],
+  ["Mientras se aplaza, la vida pasa de largo.","Séneca","Cartas a Lucilio, 1"],
+  ["No es que tengamos poco tiempo, es que perdemos mucho.","Séneca","De la brevedad de la vida, 1"],
+  ["Sufrimos más a menudo en la imaginación que en la realidad.","Séneca","Cartas a Lucilio, 13"],
+  ["Ningún viento es favorable para quien no sabe a qué puerto se dirige.","Séneca","Cartas a Lucilio, 71"],
+  ["La filosofía enseña a obrar, no a hablar.","Séneca","Cartas a Lucilio, 20"],
+  ["Empieza ya a vivir, y cuenta cada día como una vida aparte.","Séneca","Cartas a Lucilio, 101"],
+  ["Nada grande nace de golpe; ni siquiera el racimo de uvas o el higo.","Epicteto","Disertaciones I, 15"],
+  ["Todo hábito y toda facultad se mantienen y crecen con sus actos: el de caminar, caminando; el de correr, corriendo.","Epicteto","Disertaciones II, 18"],
+  ["Si quieres hacer de algo un hábito, hazlo.","Epicteto","Disertaciones II, 18"],
+  ["Dite primero qué quieres ser; después haz lo que tengas que hacer.","Epicteto","Disertaciones III, 23"]
+];
+let fraseOffset=0;
+const HEROE_SPRITE={"id":"hoplita","pal":{"k":"#140c06","b":"#d8a24a","B":"#8e5c20","l":"#f6d488","s":"#e3ab7a","S":"#a8703e","e":"#1a1010","r":"#2f6fd0","R":"#173f86","c":"#2f6fd0"},"px":[".........krrrrk.........","........krrRRrrk........",".......kkrrRRrrkk.......",".....kkbbkkkkkkbbkk.....","....kblbbbbbbbbbblbk....","...kbllbbbbbbbbbbllbk...","...kblbbbbbbbbbbbblbk...","..kbbbbBBBBBBBBBBbbbbk..","..kbbbkkkkkbbkkkkkbbbk..","..kbbkSssssbbssssSkbbk..","..kbbksekssbbsskeskbbk..","..kbbkSssssbbssssSkbbk..","..kbbbksssssssssskbbbk..","..kBbbbksssssssskbbbBk..","..kBbbbksskkkksskbbbBk..","..kBbbbbksssssskbbbbBk..","...kBbbbbksssskbbbbBk...","...kBbbbbbkkkkbbbbbBk...","....kBbbbbbbbbbbbbBk....",".....kkkkkkkkkkkkkk.....","........kSssssSk........","..kkkkkkkbbbbbbkkkkkkk..",".kcckbbblbbbbbblbbbkcck.","kcccbbbbbbbbbbbbbbbbccck"]};
+const CURA_GOLPE=10, CURA_VICTORIA=20, VIDA_AL_LEVANTARSE=30;
+let caidaMostrada=null;
+function descansando(t,h){const d=new Date(t),x=d.getHours()+d.getMinutes()/60,a=h.descansoIni,b=h.descansoFin;if(a===b)return false;return a>b?(x>=a||x<b):(x>=a&&x<b)}
+function horasActivas(t0,t1,h){const PASO=5*60000;t0=Math.max(t0,t1-14*864e5);let m=0;for(let t=t0;t<t1;t+=PASO){const c=Math.min(PASO,t1-t);if(!descansando(t,h))m+=c}return m/36e5}
+function vidaHeroe(h,ahora){ahora=ahora||Date.now();return Math.max(0,h.vida-horasActivas(h.ultimo,ahora,h)*h.drenaje)}
+function momentoCaida(h){const PASO=5*60000;let t=Math.max(h.ultimo,Date.now()-14*864e5),v=h.vida;while(t<Date.now()){if(!descansando(t,h)){v-=h.drenaje*PASO/36e5;if(v<=0)return t+PASO}t+=PASO}return Date.now()}
+function horasHastaCaer(h,v){const PASO=15*60000;let t=Date.now(),x=v,horas=0;for(let i=0;i<4*24*14&&x>0;i++){if(!descansando(t,h))x-=h.drenaje*PASO/36e5;t+=PASO}return (t-Date.now())/36e5}
+function curarHeroe(cura){
+  const h=S.heroe;if(!h)return 0;const ahora=Date.now();let v=vidaHeroe(h,ahora),levantado=false;
+  if(v<=0){h.caidas=(h.caidas||0)+1;h.enPieDesde=ahora;v=VIDA_AL_LEVANTARSE;levantado=true}
+  const antes=v;v=Math.min(100,v+cura);h.vida=Math.round(v*100)/100;h.ultimo=ahora;
+  return {cura:Math.round((v-antes)*10)/10,levantado};
+}
+const RANGOS=['Recluta','Hoplita','Veterano','Capitán','Campeón','Héroe','Leyenda','Semidiós'];
+const EVOLUCION=[{"id":"h-recluta","pal":{"k":"#140c06","b":"#d8a24a","B":"#8e5c20","l":"#f6d488","s":"#e3ab7a","S":"#a8703e","e":"#1a1010","r":"#2f6fd0","R":"#173f86","c":"#2f6fd0","t":"#d8c8a0","T":"#a8946a","h":"#3a2416","H":"#5a3a22","x":"#b8443a","g":"#ffd24a","v":"#5aa83a","V":"#2e6a20","a":"#ffe68a","w":"#ffffff","C":"#5a120c"},"px":["........................","........................","........................","........kkkkkkkk........","......kkhhhhhhhhkk......",".....khhhhhhhhhhhhk.....","....khhHhhhhhhhhHhhk....","....khHhhhhhhhhhhHhk....","....krrrrrrrrrrrrrrk....","....khsssssssssssshk....","...kSssessssssssessSk...","...kSssssssssssssssSk...","....kssssssSSssssssk....","....kssssssssssssssk....","....kssssskkkksssssk....",".....kssssssssssssk.....","......kksssssssskk......","........kkkkkkkk........","........kSssssSk........","......kkkSssssSkkk......","....kkttttTttTttttkk....","...kttttttTttTttttttk...","..kttttttttttttttttttk..","..kttttttttttttttttttk.."]},{"id":"h-hoplita","pal":{"k":"#140c06","b":"#d8a24a","B":"#8e5c20","l":"#f6d488","s":"#e3ab7a","S":"#a8703e","e":"#1a1010","r":"#2f6fd0","R":"#173f86","c":"#2f6fd0","t":"#d8c8a0","T":"#a8946a","h":"#3a2416","H":"#5a3a22","x":"#b8443a","g":"#ffd24a","v":"#5aa83a","V":"#2e6a20","a":"#ffe68a","w":"#ffffff","C":"#5a120c"},"px":[".........krrrrk.........","........krrRRrrk........",".......kkrrRRrrkk.......",".....kkbbkkkkkkbbkk.....","....kblbbbbbbbbbblbk....","...kbllbbbbbbbbbbllbk...","...kblbbbbbbbbbbbblbk...","..kbbbbBBBBBBBBBBbbbbk..","..kbbbkkkkkbbkkkkkbbbk..","..kbbkSssssbbssssSkbbk..","..kbbksekssbbsskeskbbk..","..kbbkSssssbbssssSkbbk..","..kbbbksssssssssskbbbk..","..kBbbbksssssssskbbbBk..","..kBbbbksskkkksskbbbBk..","..kBbbbbksssssskbbbbBk..","...kBbbbbksssskbbbbBk...","...kBbbbbbkkkkbbbbbBk...","....kBbbbbbbbbbbbbBk....",".....kkkkkkkkkkkkkk.....","........kSssssSk........","..kkkkkkkbbbbbbkkkkkkk..",".kcckbbblbbbbbblbbbkcck.","kcccbbbbbbbbbbbbbbbbccck"]},{"id":"h-veterano","pal":{"k":"#140c06","b":"#d8a24a","B":"#8e5c20","l":"#f6d488","s":"#e3ab7a","S":"#a8703e","e":"#1a1010","r":"#c0281e","R":"#7a120c","c":"#2f6fd0","t":"#d8c8a0","T":"#a8946a","h":"#3a2416","H":"#5a3a22","x":"#b8443a","g":"#ffd24a","v":"#5aa83a","V":"#2e6a20","a":"#ffe68a","w":"#ffffff","C":"#5a120c"},"px":[".........krrrrk.........","........krrRRrrk........",".......kkrrRRrrkk.......",".....kkbbkkkkkkbbkk.....","....kblbbbbbbbbbblbk....","...kbllbbbbbbbbbbllbk...","...kblbbbbbbbbbbbblbk...","..kbbbbBBBBBBBBBBbbbbk..","..kbbbkkkkkbbkkkkkbbbk..","..kbbkSssssbbssssSkbbk..","..kbbksekssbbsskeskbbk..","..kbbkSssssbbxsssSkbbk..","..kbbbksssssssxsskbbbk..","..kBbbbksssssssxkbbbBk..","..kBbbbksskkkksskbbbBk..","..kBbbbbksssssskbbbbBk..","...kBbbbbksssskbbbbBk...","...kBbbbbbkkkkbbbbbBk...","....kBbbbbbbbbbbbbBk....",".....kkkkkkkkkkkkkk.....","..kkk...kSssssSk...kkk..",".kblbkkkkbbbbbbkkkkblbk.","kbllbkbblbbbbbblbbkbllbk","kbbbbkbbbbbbbbbbbbkbbbbk"]},{"id":"h-capitan","pal":{"k":"#140c06","b":"#d8a24a","B":"#8e5c20","l":"#f6d488","s":"#e3ab7a","S":"#a8703e","e":"#1a1010","r":"#c0281e","R":"#7a120c","c":"#c0281e","t":"#d8c8a0","T":"#a8946a","h":"#3a2416","H":"#5a3a22","x":"#b8443a","g":"#ffd24a","v":"#5aa83a","V":"#2e6a20","a":"#ffe68a","w":"#ffffff","C":"#7a120c"},"px":[".......kkkkkkkkkk.......",".....kkrrrrrrrrrrkk.....","....krrrrrRRRRrrrrrk....",".....kkbbkkkkkkbbkk.....","....kblbbbbbbbbbblbk....","...kbllbbbbbbbbbbllbk...","...kblbbbbbbbbbbbblbk...","..kbbbbBBBBBBBBBBbbbbk..","..kbbbkkkkkbbkkkkkbbbk..","..kbbkSssssbbssssSkbbk..","..kbbksekssbbsskeskbbk..","..kbbkSssssbbxsssSkbbk..","..kbbbksssssssxsskbbbk..","..kBbbbksssssssxkbbbBk..","..kBbbbksskkkksskbbbBk..","..kBbbbbksssssskbbbbBk..","Cc.kBbbbbksssskbbbbBk.cC","Cc.kBbbbbbkkkkbbbbbBk.cC","Cc..kBbbbbbbbbbbbbBk..cC","Cc...kkkkkkkkkkkkkk...cC","Cckkk...kSssssSk...kkkcC","CkblbkkkkbbbbbbkkkkblbkC","kbllbkbblbbbbbblbbkbllbk","kbbbbkbbbbbbbbbbbbkbbbbk"]},{"id":"h-campeon","pal":{"k":"#140c06","b":"#d8a24a","B":"#8e5c20","l":"#f6d488","s":"#e3ab7a","S":"#a8703e","e":"#1a1010","r":"#8a3ad0","R":"#4e1a86","c":"#8a3ad0","t":"#d8c8a0","T":"#a8946a","h":"#3a2416","H":"#5a3a22","x":"#b8443a","g":"#ffd24a","v":"#5aa83a","V":"#2e6a20","a":"#ffe68a","w":"#ffffff","C":"#4e1a86"},"px":[".......kkkkkkkkkk.......",".....kkrrrrrrrrrrkk.....","....krrrrrRRRRrrrrrk....",".....kkbbkkkkkkbbkk.....","....kblbbbbbbbbbblbk....","...kbllbbbbbbbbbbllbk...","...kblbbbbbbbbbbbblbk...","..kbbbbggggggggggbbbbk..","..kbbbkkkkkbbkkkkkbbbk..","..kbbkSssssbbssssSkbbk..","..kbbksekssbbsskeskbbk..","..kbbkSssssbbxsssSkbbk..","..kbbbksssssssxsskbbbk..","..kgbbbksssssssxkbbbgk..","..kgbbbksskkkksskbbbgk..","..kgbbbbksssssskbbbbgk..","Cc.kgbbbbksssskbbbbgk.cC","Cc.kgbbbbbkkkkbbbbbgk.cC","Cc..kgbbbbbbbbbbbbgk..cC","Cc...kkkkkkkkkkkkkk...cC","Cckkk...kSssssSk...kkkcC","CkblbkkkkbbbbbbkkkkblbkC","kbllbkbblbbbbbblbbkbllbk","kbbbbkbbbbbbbbbbbbkbbbbk"]},{"id":"h-heroe","pal":{"k":"#140c06","b":"#d8a24a","B":"#8e5c20","l":"#f6d488","s":"#e3ab7a","S":"#a8703e","e":"#1a1010","r":"#8a3ad0","R":"#4e1a86","c":"#8a3ad0","t":"#d8c8a0","T":"#a8946a","h":"#3a2416","H":"#5a3a22","x":"#b8443a","g":"#ffd24a","v":"#5aa83a","V":"#2e6a20","a":"#ffe68a","w":"#ffffff","C":"#4e1a86"},"px":[".......kkkkkkkkkk.......",".....kkrrrrrrrrrrkk.....","....krrrrrRRRRrrrrrk....",".....kkbbkkkkkkbbkk.....","...vkblbbbbbbbbbblbkv...","..vVbllbbbbbbbbbbllbVv..","..vkblbbbbbbbbbbbblbkv..",".vVbbbbggggggggggbbbbVv.",".vvbbbkkkkkbbkkkkkbbbvv.",".VkbbkSssssbbssssSkbbkV.","..kbbksekssbbsskeskbbk..","..kbbkSssssbbxsssSkbbk..","..kbbbksssssssxsskbbbk..","..kgbbbksssssssxkbbbgk..","..kgbbbksskkkksskbbbgk..","..kgbbbbksssssskbbbbgk..","Cc.kgbbbbksssskbbbbgk.cC","Cc.kgbbbbbkkkkbbbbbgk.cC","Cc..kgbbbbbbbbbbbbgk..cC","Cc...kkkkkkkkkkkkkk...cC","Cckkk...kSssssSk...kkkcC","CkblbkkkkbbbbbbkkkkblbkC","kbllbkbblbbbbbblbbkbllbk","kbbbbkbbbbbbbbbbbbkbbbbk"]},{"id":"h-leyenda","pal":{"k":"#140c06","b":"#f2c230","B":"#a87a10","l":"#fff2a8","s":"#e3ab7a","S":"#a8703e","e":"#1a1010","r":"#f4f4f4","R":"#b8b8c8","c":"#c0281e","t":"#d8c8a0","T":"#a8946a","h":"#3a2416","H":"#5a3a22","x":"#b8443a","g":"#fff2a8","v":"#5aa83a","V":"#2e6a20","a":"#ffe68a","w":"#ffffff","C":"#7a120c"},"px":[".......kkkkkkkkkk.......",".....kkrrrrrrrrrrkk.....","....krrrrrRRRRrrrrrk....",".....kkbbkkkkkkbbkk.....","...vkblbbbbbbbbbblbkv...","..vVbllbbbbbbbbbbllbVv..","..vkblbbbbbbbbbbbblbkv..",".vVbbbbggggggggggbbbbVv.",".vvbbbkkkkkbbkkkkkbbbvv.",".VkbbkSssssbbssssSkbbkV.","..kbbksekssbbsskeskbbk..","..kbbkSssssbbxsssSkbbk..","..kbbbksssssssxsskbbbk..","..kgbbbksssssssxkbbbgk..","..kgbbbksskkkksskbbbgk..","..kgbbbbksssssskbbbbgk..","Cc.kgbbbbksssskbbbbgk.cC","Cc.kgbbbbbkkkkbbbbbgk.cC","Cc..kgbbbbbbbbbbbbgk..cC","Cc...kkkkkkkkkkkkkk...cC","Cckkk...kSssssSk...kkkcC","CkblbkkkkbbbbbbkkkkblbkC","kbllbkbblbbbbbblbbkbllbk","kbbbbkbbbbbbbbbbbbkbbbbk"]},{"id":"h-semidios","pal":{"k":"#140c06","b":"#e4ecf4","B":"#8a98aa","l":"#ffffff","s":"#e3ab7a","S":"#a8703e","e":"#5ad0ff","r":"#ffd24a","R":"#c08a10","c":"#f4f4f4","t":"#d8c8a0","T":"#a8946a","h":"#3a2416","H":"#5a3a22","x":"#b8443a","g":"#ffd24a","v":"#ffd24a","V":"#c08a10","a":"#ffe68a","w":"#ffffff","C":"#b8b8c8"},"px":["....a..kkkkkkkkkk..a....","..a..kkrrrrrrrrrrkk..a..",".a..krrrrrRRRRrrrrrk..a.",".....kkbbkkkkkkbbkk.....","a..vkblbbbbbbbbbblbkv..a","..vVbllbbbbbbbbbbllbVv..","a.vkblbbbbbbbbbbbblbkv.a",".vVbbbbggggggggggbbbbVv.",".vvbbbkkkkkbbkkkkkbbbvv.",".VkbbkSssssbbssssSkbbkV.","a.kbbksekssbbsskeskbbk.a","..kbbkSssssbbxsssSkbbk..","a.kbbbksssssssxsskbbbk.a","..kgbbbksssssssxkbbbgk..","..kgbbbksskkkksskbbbgk..","..kgbbbbksssssskbbbbgk..","Cc.kgbbbbksssskbbbbgk.cC","Cc.kgbbbbbkkkkbbbbbgk.cC","Cc..kgbbbbbbbbbbbbgk..cC","Cc...kkkkkkkkkkkkkk...cC","Cckkk...kSssssSk...kkkcC","CkblbkkkkbbbbbbkkkkblbkC","kbllbkbblbbbbbblbbkbllbk","kbbbbkbbbbbbbbbbbbkbbbbk"]}];
+const MEJORAS=['','Recibes tu primer casco de bronce.','Hombreras de bronce y una cicatriz que lo cuenta.','Penacho de capitán y capa roja.','Tu armadura gana filo de oro.','Te coronan de laurel.','Tu casco ahora es de oro.','Ya no eres del todo mortal.'];
+const UMBRALES=[0,3,7,14,21,30,45,66]; // días de batalla para cada nivel; 66 = mediana del estudio de Lally (2010)
+const umbral=L=>L<=UMBRALES.length?UMBRALES[L-1]:66+30*(L-UMBRALES.length);
+const DIAS_HABITO=66;
+function setBatalla(){const c=new Set();for(const r of S.rivales){for(const k in (r.dias||{}))c.add(k);if(r.caidoEn)c.add(r.caidoEn)}const d=new Set();for(const k of c)if(diaCuenta(k))d.add(k);return d}
+// Regla: puedes fallar un día suelto; dos días seguidos sin victoria reinician la racha. El día fallado no suma.
+function rachaFlex(ok){let n=0,f=0;for(let i=0;i<800;i++){if(ok(claveDia(i))){n++;f=0}else{if(i===0)continue;f++;if(f>=2)break}}return n}
+const enPeligro=ok=>!ok(claveDia(0))&&!ok(claveDia(1))&&ok(claveDia(2));
+function rachaDe(set){return rachaFlex(k=>set.has(k))}
+const diaNum=k=>{const [y,m,d]=k.split('-').map(Number);return Math.round(Date.UTC(y,m-1,d)/864e5)};
+function mejorRachaDe(keys){const ns=[...keys].map(diaNum).sort((a,b)=>a-b);let best=0,cur=0,prev=null;for(const n of ns){cur=(prev!==null&&n-prev<=2&&n>prev)?cur+1:(prev===n?cur:1);prev=n;if(cur>best)best=cur}return best}
+// nivel = racha de días de batalla con la regla de no fallar dos veces
+function diasBatalla(){return rachaDe(setBatalla())}
+const D0=set=>enPeligro(k=>set.has(k));
+function diasVencido(r){return racha(r)}
+function forjado(r){return mejorRachaDe(Object.keys(r.dias||{}).filter(k=>r.dias[k]>=r.vida))>=DIAS_HABITO}
+function nivelDe(v){let L=1;while(v>=umbral(L+1))L++;return L}
+function rangoDe(L){return L<=RANGOS.length?RANGOS[L-1]:RANGOS[RANGOS.length-1]+' '+(L-RANGOS.length+1)}
+function heroeSprite(L){return EVOLUCION[Math.min(L,EVOLUCION.length)-1]}
+let subidaPendiente=null;
+function victoriasDe(h){
+  if(typeof h.victorias==='number')return h.victorias;
+  let n=0;for(const r of S.rivales){if(r.tipo==='jefe'){if(r.caidoEn)n++}else for(const k in (r.dias||{}))if(r.dias[k]>=r.vida)n++}
+  return n;
+}
+function nemesisLinea(){
+  const e=nemesisEn(hoy()),n=nemesisHoy();
+  if(!e||!n)return `<p class="nem-l">Sin némesis, cualquier victoria hace contar el día. Elige uno desde el menú ⋯ de un rival y el día solo contará si cae él.</p>`;
+  if(n.tipo==='jefe'&&n.caidoEn&&n.caidoEn<hoy())return `<p class="nem-l">Tu némesis, ${esc(n.nombre)}, cayó para siempre. Elige otro.</p>`;
+  if(cumpleNemesis(n,hoy()))return `<p class="nem-l ok">Tu némesis, ${esc(n.nombre)}, ${n.tipo==='jefe'?'recibió su golpe':'cayó'} hoy. El día cuenta.</p>`;
+  return `<p class="nem-l">El día no cuenta hasta que ${n.tipo==='jefe'?'golpees a':'caiga'} <b>${esc(n.nombre)}</b>.</p>`;
+}
+function heroeHTML(){
+  const h=S.heroe;
+  if(!h)return `<button class="crear-heroe" data-act="heroe-editar"><div class="sprite">${spriteSVG(heroeSprite(1))}</div><div><b>Crea tu personaje</b><span>Sin héroe no hay batalla. Pierde vida cada hora y solo tus golpes lo curan.</span></div></button>`;
+  const v=vidaHeroe(h),caido=v<=0,pct=Math.max(0,v),ahora=Date.now();
+  let info='',aviso='';
+  if(caido){
+    const tc=new Date(momentoCaida(h));
+    aviso=`Caíste ${tc.toLocaleDateString('es-EC',{weekday:'long'})} a las ${tc.toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'})}. Golpea a cualquier rival para levantarte.`;
+  }else{
+    const hr=horasHastaCaer(h,v);
+    const desc=descansando(ahora,h)?` · <b>descansando</b> hasta las ${String(h.descansoFin).padStart(2,'0')}:00`:'';
+    const dias=Math.floor((ahora-(h.enPieDesde||h.creado||ahora))/864e5);
+    info=`Pierdes <b>${h.drenaje} %</b> por hora${desc}<br>Si no peleas, caes en <b>${hr<1?Math.round(hr*60)+' min':'~'+Math.round(hr)+' h'}</b> · en pie hace ${dias} ${dias===1?'día':'días'} · caídas: ${h.caidas||0}`;
+  }
+  const SB=setBatalla(),peligroH=D0(SB),D=diasBatalla(),mejor=mejorRachaDe(setBatalla()),L=nivelDe(D),base=umbral(L),sig=umbral(L+1),xp=(D-base)/(sig-base)*100;
+  return `<article class="card heroe ${pct<=25?'bajo':''} ${caido?'caido-h':''} ${L>=7?'aura':''}" id="heroe-card"><div class="flash"></div>
+    <div class="top"><div class="sprite">${spriteSVG(heroeSprite(L))}</div>
+      <div><div class="nombre">${esc(h.nombre)}${caido?'<span class="ko">K.O.</span>':''}</div><div class="tipo">Nivel ${L} · ${rangoDe(L)}</div></div>
+      <button class="menu-btn" data-act="heroe-editar" aria-label="Ajustes del personaje">⋯</button></div>
+    <div class="vida"><div class="barra"><div class="relleno" style="width:${pct}%"></div></div>
+      <div class="nums"><span>Vida <b>${Math.ceil(pct)} %</b></span><span>+${CURA_GOLPE} por golpe · +${CURA_VICTORIA} por victoria</span></div></div>
+    <div class="victorias"><span class="vn">${victoriasDe(h)}</span><span class="vt">${victoriasDe(h)===1?'victoria':'victorias'}</span></div>
+    ${nemesisLinea()}
+    ${peligroH?`<p class="alerta-racha">Ayer no venciste a nadie. Si hoy tampoco, tu racha vuelve a cero.</p>`:''}
+    <div class="xp"><div class="xp-barra"><div style="width:${xp}%"></div></div><div class="xp-t">${D} ${D===1?'día':'días'} de batalla en racha · nivel ${L+1} a los ${sig}${mejor>D?` · récord ${mejor}`:''}</div></div>
+    ${aviso?`<p class="aviso">${aviso}</p>`:`<p class="info">${info}</p>`}
+  </article>`;
+}
+function revisarCaida(){
+  const h=S.heroe;if(!h)return;
+  if(vidaHeroe(h)<=0){const t=momentoCaida(h);const k='bestiario.caida';let vista=null;try{vista=localStorage.getItem(k)}catch(e){}
+    if(caidaMostrada!==t&&vista!==String(t)){caidaMostrada=t;try{localStorage.setItem(k,String(t))}catch(e){}
+      $('d-k').textContent='Has caído';$('d-sprite').innerHTML=spriteSVG(heroeSprite(nivelDe(diasBatalla())));$('d-n').textContent=h.nombre;
+      $('d-e').textContent='Pasaron las horas y ningún rival recibió un golpe. Para levantarte, golpea a cualquiera.';
+      $('d-frase').innerHTML=fraseHTML(elegir(FRASES,'caida'+t));$('d-ok').textContent='Levantarme';$('derrota').classList.remove('sube');$('derrota').classList.add('on')}}
+}
+function fraseHTML(f){return `<p class="fq">${esc(f[0])}</p><p class="fa">${esc(f[1])} · <i>${esc(f[2])}</i></p>`}
+function pintarFrase(){const idx=(hash(hoy())+fraseOffset)%FRASES.length;$('frase').innerHTML=fraseHTML(FRASES[idx])}
+
+/* ---------- lógica ---------- */
+const danoDe=(r,k)=>r.tipo==='diario'?((r.dias||{})[k||hoy()]||0):(r.dano||0);
+/* abandono: días completos sin recibir un golpe, contados hasta ayer */
+function ignorado(r){
+  const H=hoy();let ult=r.creado||H;
+  for(const k in (r.dias||{}))if(k<H&&r.dias[k]>0&&k>ult)ult=k;
+  for(const x of (r.hist||[]))if(x.d&&x.d<H&&x.d>ult)ult=x.d;
+  if(ult>=H)return 0;
+  return Math.max(0,diaNum(H)-diaNum(ult)-1);
+}
+function furia(r){if(r.tipo==='jefe'&&r.caidoEn)return 0;const g=ignorado(r);return g>=4?2:g>=2?1:0}
+const BONO_FURIA=[0,0.25,0.5];
+const vidaHoy=r=>{if(r.tipo==='jefe')return r.vida;const f=furia(r);if(!f)return r.vida;const v=r.vida*(1+BONO_FURIA[f]);return Number.isInteger(r.vida)?Math.ceil(v):r2(v)};
+const vidaDia=(r,k)=>(!k||k===hoy())?vidaHoy(r):r.vida;
+const restante=(r,k)=>Math.max(0,r2(vidaDia(r,k)-danoDe(r,k)));
+/* némesis: historial de quién fue el némesis desde qué día */
+function nemesisEn(k){let e=null;for(const x of (S.nemesis||[]))if(x.desde<=k)e=x;return e&&e.id?e:null}
+function nemesisHoy(){const e=nemesisEn(hoy());return e?S.rivales.find(x=>x.id===e.id)||null:null}
+const esNemesis=r=>{const n=nemesisHoy();return !!n&&n.id===r.id};
+function hayVictoria(k){for(const r of S.rivales){if(r.tipo==='jefe'){if(r.caidoEn===k)return true}else if(((r.dias||{})[k]||0)>=vidaDia(r,k))return true}return false}
+function cumpleNemesis(r,k){if(r.tipo==='jefe')return r.caidoEn===k||((r.dias||{})[k]||0)>0;return ((r.dias||{})[k]||0)>=vidaDia(r,k)}
+function diaCuenta(k){
+  const e=nemesisEn(k);if(!e)return hayVictoria(k);
+  const r=S.rivales.find(x=>x.id===e.id);
+  if(!r||(r.tipo==='jefe'&&r.caidoEn&&r.caidoEn<k))return hayVictoria(k);
+  return cumpleNemesis(r,k);
+}
+const vencidoHoy=r=>restante(r)<=0;
+function racha(r){return rachaFlex(k=>danoDe(r,k)>=vidaDia(r,k))}
+function burlaDe(r){
+  if(r.tipo==='diario'&&vencidoHoy(r))return{t:elegir(ANIMOS.vencido,r.id+hoy()),g:true};
+  const p=restante(r)/vidaHoy(r),golpes=(r.hist||[]).length;
+  if(p>=0.999&&furia(r))return{t:`Lo que evitas crece. Llevas ${ignorado(r)} días sin enfrentarlo.`,g:false,b:true};
+  if(p>=0.999)return{t:r.burla||elegir(ANIMOS.inicio,r.id+hoy()),g:false,b:!!r.burla};
+  const tier=p<=0.25?'casi':'golpe';
+  return{t:elegir(ANIMOS[tier],r.id+golpes+hoy()),g:false};
+}
+function spriteDe(r){return SPRITES.find(x=>x.id===r.sprite)||SPRITES[hash(r.nombre||'')%SPRITES.length]}
+const cacheSvg={};
+function hexMix(c,t,a){const f=x=>parseInt(x,16);const r=f(c.slice(1,3)),g=f(c.slice(3,5)),b=f(c.slice(5,7));const R=f(t.slice(1,3)),G=f(t.slice(3,5)),B=f(t.slice(5,7));const m=(x,y)=>Math.round(x+(y-x)*a).toString(16).padStart(2,'0');return '#'+m(r,R)+m(g,G)+m(b,B)}
+function herir(sp,etapa){
+  if(!etapa)return sp;
+  const H=sp.px.length,W=sp.px[0].length,px=sp.px.map(r=>r.split(''));
+  const pal=Object.assign({},sp.pal,{'1':'#e0463a','2':'#7a120c'});
+  const ok=(x,y)=>y>=0&&y<H&&x>=0&&x<W&&px[y][x]!=='.';
+  const corte=(x0,y0,len)=>{for(let i=0;i<len;i++){const x=x0+i,y=y0+i;if(ok(x,y)){px[y][x]='2';if(ok(x+1,y))px[y][x+1]='1'}}};
+  const h=hash(sp.id);
+  corte(6+h%3,8+h%2,3);corte(14+h%2,5+h%3,3);
+  if(etapa>=2){
+    corte(9+h%3,13+h%2,4);corte(4+h%2,15,3);corte(16,12+h%2,3);
+    // mordida: le falta un pedazo arriba a la derecha
+    for(let y=0;y<H;y++){let n=0;for(let x=W-1;x>=0&&n<2;x--){if(px[y][x]!=='.'){if(y>=4&&y<=7)px[y][x]='.';n++}}}
+    for(let y=4;y<=7;y++){for(let x=W-1;x>=0;x--){if(px[y][x]!=='.'){px[y][x]='k';break}}}
+    // gotas de sangre bajo los cortes
+    [[10+h%3,18],[5+h%2,19],[17,16+h%2]].forEach(([x,y])=>{for(let k=0;k<2;k++)if(ok(x,y+k))px[y+k][x]='1'});
+    for(const c in pal)if(c!=='k'&&c!=='1'&&c!=='2')pal[c]=hexMix(pal[c],'#3a0a08',.32);
+  }else{
+    for(const c in pal)if(c!=='k'&&c!=='1'&&c!=='2')pal[c]=hexMix(pal[c],'#5a4a40',.15);
+  }
+  return {id:sp.id+'~'+etapa,pal,px:px.map(r=>r.join(''))};
+}
+function spriteSVG(sp0,etapa){
+  const sp=herir(sp0,etapa||0);
+  if(cacheSvg[sp.id])return cacheSvg[sp.id];
+  let rects='';const W=sp.px[0].length;
+  sp.px.forEach((row,y)=>{let x=0;while(x<W){const c=row[x];if(c==='.'){x++;continue}let w=1;while(x+w<W&&row[x+w]===c)w++;rects+=`<rect x="${x}" y="${y}" width="${w}" height="1" fill="${sp.pal[c]}"/>`;x+=w}});
+  return cacheSvg[sp.id]=`<svg viewBox="0 0 ${W} ${sp.px.length}" shape-rendering="crispEdges" aria-hidden="true">${rects}</svg>`;
+}
+function etapaDe(r){if(r.tipo==='jefe'&&r.caidoEn)return 2;const p=restante(r)/vidaHoy(r);return p>0.6?0:p>0.25?1:2}
+const sprite=r=>spriteSVG(spriteDe(r),etapaDe(r));
+
+function golpear(id,n,el){
+  const r=S.rivales.find(x=>x.id===id);if(!r||!(n>0))return;
+  if(r.tipo==='jefe'&&r.caidoEn)return;
+  const antes=restante(r),k=hoy(),vBase=S.heroe?victoriasDe(S.heroe):0,dBase=diasBatalla();
+  if(r.tipo==='diario'){r.dias=r.dias||{};r.dias[k]=r2((r.dias[k]||0)+n);podar(r)}
+  else{r.dano=r2((r.dano||0)+n);r.dias=r.dias||{};r.dias[k]=r2((r.dias[k]||0)+n);podar(r)}
+  r.hist=(r.hist||[]).concat({t:Date.now(),n:n,d:k}).slice(-40);
+  const despues=restante(r);
+  if(antes>0&&despues<=0&&r.tipo==='jefe')r.caidoEn=k;
+  const gano=antes>0&&despues<=0;
+  const res=S.heroe?curarHeroe(CURA_GOLPE+(gano?CURA_VICTORIA:0)):null;
+  if(S.heroe&&gano){{const dN=diasBatalla();if(nivelDe(dN)>nivelDe(dBase))subidaPendiente=nivelDe(dN)}S.heroe.victorias=vBase+1;r.hist[r.hist.length-1].v=1}
+  if(res)r.hist[r.hist.length-1].c=res.cura;
+  guardar();
+  animar(id,n,el);
+  if(res&&res.cura>0)animarCura(res.cura);
+  if(gano){const c=$('heroe-card');if(c){c.classList.remove('gana');void c.offsetWidth;c.classList.add('gana')}}
+  if(antes>0&&despues<=0)setTimeout(()=>mostrarDerrota(r),450);
+}
+function animarCura(c){const card=$('heroe-card');if(!card)return;card.classList.remove('curado');void card.offsetWidth;card.classList.add('curado');const f=document.createElement('div');f.className='cura';f.textContent='+'+fmt(c);card.appendChild(f);setTimeout(()=>f.remove(),950)}
+function podar(r){const lim=claveDia(400);for(const k in r.dias)if(k<lim)delete r.dias[k]}
+function deshacer(id){
+  const r=S.rivales.find(x=>x.id===id);if(!r||!r.hist||!r.hist.length)return;
+  const u=r.hist.pop();
+  if(u.v&&S.heroe)S.heroe.victorias=Math.max(0,victoriasDe(S.heroe)-1);
+  if(u.c&&S.heroe){const h=S.heroe,v=vidaHeroe(h);if(v>0){h.vida=Math.max(0.01,Math.round((v-u.c)*100)/100);h.ultimo=Date.now()}}
+  if(r.tipo==='diario'){r.dias[u.d]=Math.max(0,r2((r.dias[u.d]||0)-u.n));if(!r.dias[u.d])delete r.dias[u.d]}
+  else{r.dano=Math.max(0,r2((r.dano||0)-u.n));if(r.dias&&r.dias[u.d]){r.dias[u.d]=Math.max(0,r2(r.dias[u.d]-u.n));if(!r.dias[u.d])delete r.dias[u.d]}if(restante(r)>0)r.caidoEn=null}
+  guardar();
+}
+function revivir(id){const r=S.rivales.find(x=>x.id===id);if(!r)return;r.caidoEn=null;r.dano=0;r.hist=[];guardar()}
+
+/* ---------- etiquetas ---------- */
+const normEt=t=>t.trim().toLowerCase().replace(/\s+/g,' ').slice(0,24);
+function todasEtiquetas(){const m={};for(const r of S.rivales)for(const t of (r.etiquetas||[]))m[t]=(m[t]||0)+1;return Object.keys(m).sort((a,b)=>m[b]-m[a]||a.localeCompare(b))}
+const pasaFiltro=r=>!filtro||(r.etiquetas||[]).includes(filtro);
+function filtrosHTML(){const ts=todasEtiquetas();if(!ts.length)return'';if(filtro&&!ts.includes(filtro))filtro=null;
+  return `<button class="chip ${!filtro?'on':''}" data-act="filtro" data-t="">Todos</button>`+ts.map(t=>`<button class="chip ${filtro===t?'on':''}" data-act="filtro" data-t="${esc(t)}">${esc(t)}</button>`).join('')}
+
+/* ---------- trofeos ---------- */
+function trofeosDe(k){
+  const out=[];
+  for(const r of S.rivales){if(!pasaFiltro(r))continue;
+    if(r.tipo==='diario'){const d=(r.dias||{})[k];if(d!=null&&d>=vidaDia(r,k))out.push({r,cant:d})}
+    else if(r.caidoEn===k)out.push({r,cant:r.vida})}
+  return out;
+}
+const cabeza=r=>`<span class="cabeza" title="${esc(r.nombre)}">${spriteSVG(spriteDe(r),0)}<i></i></span>`;
+function renderTrofeos(){
+  $('filtros-t').innerHTML=filtrosHTML();
+  const hoyK=hoy(),[hy,hm]=hoyK.split('-').map(Number);
+  if(!mesVista)mesVista={y:hy,m:hm};
+  const {y,m}=mesVista,primero=new Date(y,m-1,1),dias=new Date(y,m,0).getDate(),off=(primero.getDay()+6)%7;
+  {const t=primero.toLocaleDateString('es-EC',{month:'long',year:'numeric'});$('mes-titulo').textContent=t[0].toUpperCase()+t.slice(1)}
+  let h=['lun','mar','mié','jue','vie','sáb','dom'].map(d=>`<div class="dow">${d}</div>`).join('');
+  for(let i=0;i<off;i++)h+='<div class="celda vacia"></div>';
+  let total=0,diasConTrofeo=0;
+  for(let d=1;d<=dias;d++){
+    const k=y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'),ts=trofeosDe(k);
+    total+=ts.length;if(ts.length)diasConTrofeo++;
+    const max=4,cab=ts.slice(0,max).map(t=>cabeza(t.r)).join('')+(ts.length>max?`<span class="mas">+${ts.length-max}</span>`:'');
+    h+=`<button class="celda ${k===hoyK?'hoy':''} ${k===diaSel?'sel':''} ${k>hoyK?'futuro':''}" data-act="dia" data-k="${k}"><span class="n">${d}</span><span class="cabezas">${cab}</span></button>`;
+  }
+  $('cal').innerHTML=h;
+  $('mes-resumen').innerHTML=total?`<b>${total}</b> ${total===1?'cabeza':'cabezas'} en <b>${diasConTrofeo}</b> ${diasConTrofeo===1?'día':'días'}`:'Este mes la pared sigue vacía.';
+  if(diaSel&&diaSel.slice(0,7)===y+'-'+String(m).padStart(2,'0')){
+    const ts=trofeosDe(diaSel);
+    $('dia-detalle').innerHTML=`<h4>${fechaLarga(diaSel)}</h4>`+(ts.length?ts.map(t=>`<div class="trofeo"><div class="placa">${spriteSVG(spriteDe(t.r),0)}</div><div><div class="t1">${esc(t.r.nombre)}</div><div class="t2">${t.r.tipo==='jefe'?'Jefe derrotado':'Vencido ese día'} · ${fmt(t.cant)} ${esc(t.r.unidad)}</div></div></div>`).join(''):'<p class="sin">Ese día no cayó nadie.</p>');
+  }else $('dia-detalle').innerHTML='';
+}
+function vista(){return location.hash==='#trofeos'?'trofeos':'batalla'}
+function aplicarVista(){
+  const v=vista();$('vista-batalla').hidden=v!=='batalla';$('vista-trofeos').hidden=v!=='trofeos';
+  document.querySelectorAll('.pestanas a').forEach(a=>a.classList.toggle('on',a.dataset.tab===v));
+}
+window.addEventListener('hashchange',()=>{aplicarVista();render()});
+
+/* ---------- render ---------- */
+function render(){
+  pintarFrase();
+  $('heroe').innerHTML=heroeHTML();
+  revisarCaida();
+  $('fecha').textContent=new Date().toLocaleDateString('es-EC',{weekday:'long',day:'numeric',month:'short'});
+  aplicarVista();
+  if(vista()==='trofeos'){renderTrofeos();return}
+  $('filtros').innerHTML=filtrosHTML();
+  const vivos=S.rivales.filter(r=>!(r.tipo==='jefe'&&r.caidoEn)&&pasaFiltro(r));
+  const caidos=S.rivales.filter(r=>r.tipo==='jefe'&&r.caidoEn&&pasaFiltro(r)).sort((a,b)=>a.caidoEn<b.caidoEn?1:-1);
+  let h='';
+  if(S.rivales.length&&!vivos.length&&filtro){
+    h+=`<div class="vacio"><p>No hay rivales en pie con la etiqueta «${esc(filtro)}».</p></div>`;
+  }
+  if(!S.rivales.length){
+    h+=`<div class="vacio"><p>Todavía no tienes enemigos.<br>Ponle nombre a lo que te cuesta y van a aparecer.</p></div>`;
+  }
+  for(const r of vivos){
+    const VH=vidaHoy(r),fu=furia(r),nem=esNemesis(r),rest=restante(r),pct=Math.max(0,rest/VH*100),b=burlaDe(r),venc=r.tipo==='diario'&&vencidoHoy(r);
+    h+=`<article class="card ${pct<=25&&pct>0?'bajo':''} ${venc?'vencido':''} ${nem?'nemesis':''} ${fu&&!venc?'furia'+fu:''}" data-id="${r.id}"><div class="flash"></div>
+      <div class="top"><div class="sprite">${sprite(r)}</div>
+        <div><div class="nombre">${esc(r.nombre)}${venc?'<span class="ko">K.O.</span>':''}</div>${r.epiteto?`<div class="epiteto">${esc(r.epiteto)}</div>`:''}<div class="tipo">${nem?'<span class="nem-t">Némesis</span> · ':''}${r.tipo==='diario'?'Rival diario':'Jefe'}</div>${fu&&!venc?`<div class="furia-t">${fu===2?'Desatado':'Enfurecido'}${r.tipo==='diario'?` · +${BONO_FURIA[fu]*100} % de vida`:''}</div>`:''}${(r.etiquetas||[]).length?`<div class="etiquetas">${r.etiquetas.map(t=>`<span>${esc(t)}</span>`).join('')}</div>`:''}</div>
+        <button class="menu-btn" data-act="menu" aria-label="Opciones">⋯</button></div>
+      <div class="vida"><div class="barra"><div class="relleno" style="width:${pct}%"></div></div>
+        <div class="nums"><span>Vida <b>${fmt(rest)}</b> / ${fmt(VH)} ${esc(r.unidad)}</span><span>${r.tipo==='diario'?'Hoy: ':'Daño: '}${fmt(danoDe(r))}</span></div></div>
+      <p class="burla ${b.g?'ganada':''} ${b.b?'suya':''}">${esc(b.t)}</p>
+      <div class="golpes">${(r.golpes||[]).map(g=>`<button class="g" data-act="golpe" data-n="${g}"><small>golpe</small>${fmt(g)} ${esc(r.unidad)}</button>`).join('')}<button class="g otro" data-act="otro"><small>otro</small>…</button></div>
+      <div class="otro-form ${otroAbierto===r.id?'on':''}"><input inputmode="decimal" placeholder="Cantidad" data-otro="${r.id}"><button class="g" data-act="otro-ok"><small>golpe</small>Dar</button></div>
+      ${r.tipo==='diario'?rachaHTML(r):''}
+      <div class="acciones ${abierto===r.id?'on':''}">
+        <button data-act="deshacer" ${r.hist&&r.hist.length?'':'disabled style="opacity:.4"'}>Deshacer último golpe</button>
+        <button data-act="nemesis">${nem?'Quitar némesis':'Hacer némesis'}</button>
+        <button data-act="editar">Editar</button>
+        <button data-act="borrar" class="peligro">Borrar</button></div>
+    </article>`;
+  }
+  h+=`<button class="nuevo" data-act="nuevo">+ Invocar un rival</button>`;
+  $('lista').innerHTML=h;
+  let c='';
+  if(caidos.length){
+    c+=`<h2>Caídos</h2>`;
+    for(const r of caidos)c+=`<div class="caido" data-id="${r.id}"><div class="sprite">${sprite(r)}</div><div><div class="n">${esc(r.nombre)}</div><div class="f">${fmt(r.vida)} ${esc(r.unidad)} · cayó el ${fechaLarga(r.caidoEn)}</div></div><button data-act="revivir">Revivir</button></div>`;
+  }
+  $('caidos').innerHTML=c;
+}
+function rachaHTML(r){
+  let d='';for(let i=13;i>=0;i--){const k=claveDia(i),x=danoDe(r,k);d+=`<span class="dia ${x>=vidaDia(r,k)?'ganado':x>0?'parcial':''} ${i===0?'hoy':''}" title="${k}"></span>`}
+  const n=racha(r);
+  return `<div class="racha"><div class="dias">${d}</div><div class="racha-n">${forjado(r)?'<b>Hábito forjado</b>'+(n?` · racha <b>${n}</b>`:''):`Racha <b>${n}</b>/${DIAS_HABITO}`}</div></div>${enPeligro(k=>danoDe(r,k)>=vidaDia(r,k))?'<p class="riesgo">Ayer fallaste. Hoy no puedes fallar.</p>':''}`;
+}
+function animar(id,n,el){
+  const card=document.querySelector(`.card[data-id="${id}"]`);if(!card)return;
+  card.classList.remove('golpeado');void card.offsetWidth;card.classList.add('golpeado');
+  const f=document.createElement('div');f.className='dano';f.textContent='−'+fmt(n);
+  const cr=card.getBoundingClientRect();
+  if(el&&el.getBoundingClientRect){const br=el.getBoundingClientRect();f.style.left=(br.left-cr.left+br.width/2-14)+'px';f.style.top=(br.top-cr.top-10)+'px'}else{f.style.right='24px';f.style.top='70px'}
+  card.appendChild(f);setTimeout(()=>f.remove(),950);
+}
+function mostrarDerrota(r){
+  const jefe=r.tipo==='jefe';
+  $('d-ok').textContent='Seguir';
+  $('d-k').textContent=esNemesis(r)?(jefe?'Tu némesis ha caído':'Némesis vencido · el día cuenta'):(jefe?'Ha caído':'Vencido por hoy');
+  $('d-sprite').innerHTML=sprite(r);
+  $('d-n').textContent=r.nombre;
+  $('d-e').textContent=(jefe?elegir(EPITAFIOS,r.id):elegir(GANADO_HOY,r.id+hoy())).replace('{n}',r.nombre);
+  $('d-frase').innerHTML=fraseHTML(elegir(FRASES,r.id+hoy()+'f'));
+  if(S.heroe)$('d-k').textContent+=' · victoria n.º '+victoriasDe(S.heroe);
+  $('derrota').classList.remove('sube');$('derrota').classList.add('on');
+}
+$('frase').onclick=()=>{fraseOffset++;pintarFrase()};
+$('d-ok').onclick=()=>{
+  if(subidaPendiente){const L=subidaPendiente;subidaPendiente=null;
+    $('d-k').textContent='Subiste de nivel';$('d-sprite').innerHTML=spriteSVG(heroeSprite(L));$('d-n').textContent='Nivel '+L+' · '+rangoDe(L);
+    $('d-e').textContent=(MEJORAS[L-1]?MEJORAS[L-1]+' ':'')+(L>=UMBRALES.length?'Llevas '+umbral(L)+' días de batalla. ':'')+'Siguiente nivel a los '+umbral(L+1)+' días de batalla en racha.';
+    $('d-frase').innerHTML=fraseHTML(elegir(FRASES,'nivel'+L));$('d-ok').textContent='Seguir';
+    $('derrota').classList.remove('on');void $('derrota').offsetWidth;$('derrota').classList.add('on','sube');return}
+  $('derrota').classList.remove('on','sube')};
+
+/* ---------- eventos ---------- */
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;
+  const act=b.dataset.act,cont=b.closest('[data-id]'),id=cont&&cont.dataset.id;
+  if(act==='golpe')golpear(id,parseFloat(b.dataset.n),b);
+  else if(act==='menu'){abierto=abierto===id?null:id;render()}
+  else if(act==='otro'){otroAbierto=otroAbierto===id?null:id;render();const i=document.querySelector(`[data-otro="${id}"]`);if(i)i.focus()}
+  else if(act==='otro-ok')darOtro(id,b);
+  else if(act==='deshacer')deshacer(id);
+  else if(act==='editar')abrirForm(S.rivales.find(r=>r.id===id));
+  else if(act==='borrar'){borrando=id;$('c-nombre').textContent=S.rivales.find(r=>r.id===id).nombre;$('confirmar').classList.add('on')}
+  else if(act==='nuevo')abrirForm(null);
+  else if(act==='revivir')revivir(id);
+  else if(act==='heroe-editar')abrirHeroe();
+  else if(act==='nemesis'){const H=hoy(),ya=esNemesis({id});S.nemesis=(S.nemesis||[]).filter(x=>x.desde!==H);S.nemesis.push({id:ya?null:id,desde:H});abierto=null;guardar()}
+  else if(act==='filtro'){filtro=b.dataset.t||null;try{filtro?localStorage.setItem('bestiario.filtro',filtro):localStorage.removeItem('bestiario.filtro')}catch(e){}render()}
+  else if(act==='mes-prev'||act==='mes-next'){const d=new Date(mesVista.y,mesVista.m-1+(act==='mes-next'?1:-1),1);mesVista={y:d.getFullYear(),m:d.getMonth()+1};render()}
+  else if(act==='dia'){diaSel=diaSel===b.dataset.k?null:b.dataset.k;render();if(diaSel)setTimeout(()=>$('dia-detalle').scrollIntoView({behavior:'smooth',block:'nearest'}),30)}
+  else if(act==='sug'){const i=$('f-etiquetas');const cur=i.value.split(',').map(normEt).filter(Boolean);if(!cur.includes(b.dataset.t))cur.push(b.dataset.t);i.value=cur.join(', ');pintarSugeridas()}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.otro){e.preventDefault();darOtro(e.target.dataset.otro,e.target)}});
+function darOtro(id,el){const i=document.querySelector(`[data-otro="${id}"]`);const n=parseFloat((i.value||'').replace(',','.'));if(n>0){otroAbierto=null;golpear(id,n,el)}}
+$('c-no').onclick=()=>{borrando=null;$('confirmar').classList.remove('on')};
+$('c-si').onclick=()=>{if(esNemesis({id:borrando})){const H=hoy();S.nemesis=(S.nemesis||[]).filter(x=>x.desde!==H);S.nemesis.push({id:null,desde:H})}S.rivales=S.rivales.filter(r=>r.id!==borrando);borrando=null;abierto=null;$('confirmar').classList.remove('on');guardar()};
+
+/* ---------- formulario héroe ---------- */
+(function(){let o='';for(let i=0;i<24;i++)o+=`<option value="${i}">${String(i).padStart(2,'0')}:00</option>`;$('h-ini').innerHTML=o;$('h-fin').innerHTML=o})();
+function abrirHeroe(){
+  const h=S.heroe||{nombre:'',drenaje:4,descansoIni:22,descansoFin:5};
+  $('h-nombre').value=h.nombre;$('h-drenaje').value=String(h.drenaje);$('h-ini').value=String(h.descansoIni);$('h-fin').value=String(h.descansoFin);
+  $('h-titulo').textContent=S.heroe?'Tu personaje':'Crea tu personaje';$('h-ok').textContent=S.heroe?'Guardar':'Empezar';$('h-error').textContent='';
+  $('capa-h').classList.add('on');setTimeout(()=>$('h-nombre').focus(),50);
+}
+$('h-cancelar').onclick=()=>$('capa-h').classList.remove('on');
+$('form-h').addEventListener('submit',e=>{
+  e.preventDefault();const nombre=$('h-nombre').value.trim();
+  if(!nombre)return $('h-error').textContent='Tu personaje necesita un nombre.';
+  const cfg={nombre,drenaje:+$('h-drenaje').value,descansoIni:+$('h-ini').value,descansoFin:+$('h-fin').value};
+  const ahora=Date.now();
+  if(S.heroe){const v=vidaHeroe(S.heroe,ahora);Object.assign(S.heroe,cfg);S.heroe.vida=v>0?Math.round(v*100)/100:0;S.heroe.ultimo=ahora}
+  else S.heroe=Object.assign({vida:100,ultimo:ahora,creado:ahora,enPieDesde:ahora,caidas:0},cfg);
+  $('capa-h').classList.remove('on');guardar();
+});
+
+/* ---------- formulario ---------- */
+function setTipo(t){tipoSel=t;document.querySelectorAll('.tipos button').forEach(b=>b.classList.toggle('sel',b.dataset.tipo===t))}
+document.querySelectorAll('.tipos button').forEach(b=>b.onclick=()=>setTipo(b.dataset.tipo));
+function setSprite(id){spriteSel=id;document.querySelectorAll('#aspectos button').forEach(b=>b.classList.toggle('sel',b.dataset.sp===id))}
+$('aspectos').innerHTML=SPRITES.map(sp=>`<button type="button" data-sp="${sp.id}" aria-label="${sp.id}">${spriteSVG(sp)}</button>`).join('');
+$('aspectos').addEventListener('click',e=>{const b=e.target.closest('[data-sp]');if(b)setSprite(b.dataset.sp)});
+function pintarSugeridas(){const cur=$('f-etiquetas').value.split(',').map(normEt);$('f-sugeridas').innerHTML=todasEtiquetas().filter(t=>!cur.includes(t)).map(t=>`<button type="button" class="chip" data-act="sug" data-t="${esc(t)}">+ ${esc(t)}</button>`).join('')}
+$('f-etiquetas').addEventListener('input',pintarSugeridas);
+function llenar(r){$('f-etiquetas').value=(r.etiquetas||[]).join(', ');setSprite(r.sprite||(r.nombre?spriteDe(r).id:SPRITES[Math.floor(Math.random()*SPRITES.length)].id));$('f-nombre').value=r.nombre||'';$('f-epiteto').value=r.epiteto||'';$('f-vida').value=r.vida!=null?String(r.vida).replace('.',','):'';$('f-unidad').value=r.unidad||'';['f-g1','f-g2','f-g3'].forEach((id,i)=>{const g=(r.golpes||[])[i];$(id).value=g!=null?String(g).replace('.',','):''});$('f-burla').value=r.burla||'';setTipo(r.tipo||'diario')}
+function abrirForm(r){
+  editando=r?r.id:null;$('f-error').textContent='';
+  $('f-titulo').textContent=r?'Editar rival':'Nuevo rival';
+  $('f-sub').textContent=r?'Cambia lo que haga falta.':'Ponle nombre a lo que tienes que vencer.';
+  $('f-ok').textContent=r?'Guardar':'Invocar';
+  llenar(r||{tipo:'diario'});
+  pintarSugeridas();
+  if(!r&&filtro)$('f-etiquetas').value=filtro,pintarSugeridas();
+  $('capa').classList.add('on');setTimeout(()=>$('f-nombre').focus(),50);
+}
+$('f-cancelar').onclick=()=>$('capa').classList.remove('on');
+$('form').addEventListener('submit',e=>{
+  e.preventDefault();
+  const nombre=$('f-nombre').value.trim(),vida=parseFloat($('f-vida').value.replace(',','.'));
+  const golpes=[...new Set(['f-g1','f-g2','f-g3'].map(id=>parseFloat($(id).value.replace(',','.'))).filter(x=>x>0))];
+  if(!nombre)return $('f-error').textContent='Todo rival necesita un nombre.';
+  if(!(vida>0))return $('f-error').textContent='La vida tiene que ser un número mayor que cero.';
+  if(!golpes.length)return $('f-error').textContent='Agrega al menos un golpe rápido.';
+  const datos={nombre,epiteto:$('f-epiteto').value.trim(),tipo:tipoSel,vida:r2(vida),unidad:$('f-unidad').value.trim(),golpes,burla:$('f-burla').value.trim(),sprite:spriteSel,etiquetas:[...new Set($('f-etiquetas').value.split(',').map(normEt).filter(Boolean))].slice(0,6)};
+  if(editando){const r=S.rivales.find(x=>x.id===editando);Object.assign(r,datos);if(r.tipo==='jefe'&&r.dano==null)r.dano=0;if(r.tipo==='diario'&&!r.dias)r.dias={};if(r.tipo==='jefe'&&restante(r)>0)r.caidoEn=null}
+  else S.rivales.push(Object.assign({id:nid(),creado:hoy(),dias:{},dano:0,hist:[],caidoEn:null},datos));
+  $('capa').classList.remove('on');abierto=null;guardar();
+});
+
+/* ---------- guardado: este dispositivo + nube (Supabase) ---------- */
+const CFG=window.BESTIARIO_CONFIG||{};
+const NUBE=!!(CFG.supabaseUrl&&CFG.supabaseAnonKey&&window.supabase&&!/TU-PROYECTO|PEGA-AQUI/.test(CFG.supabaseUrl+CFG.supabaseAnonKey));
+let sb=null,uid=null,correo=null,escribiendo=false,pendiente=false,temporizador=null,correoPend='';
+function estado(t){$('estado').textContent=t}
+function guardar(){
+  S.actualizado=Date.now();
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+  render();
+  if(!uid)return;
+  estado('Guardando…');
+  clearTimeout(temporizador);temporizador=setTimeout(()=>{temporizador=null;volcar()},700);
+}
+async function volcar(){
+  if(!uid)return;
+  if(escribiendo){pendiente=true;return}
+  escribiendo=true;pendiente=false;
+  try{
+    const {error}=await sb.from('bestiario').upsert({user_id:uid,data:S,actualizado:S.actualizado||Date.now(),updated_at:new Date().toISOString()});
+    estado(error?'Sin conexión · guardado en este dispositivo':'Sincronizado ✓');
+  }catch(e){estado('Sin conexión · guardado en este dispositivo')}
+  escribiendo=false;
+  if(pendiente)volcar();
+}
+async function traer(){
+  if(!uid||escribiendo||temporizador)return;
+  try{
+    const {data,error}=await sb.from('bestiario').select('data,actualizado').eq('user_id',uid).maybeSingle();
+    if(error)return estado('Sin conexión · usando lo de este dispositivo');
+    const nube=data?Number(data.actualizado)||0:-1,local=S.actualizado||0;
+    if(data&&data.data&&nube>local){
+      S=data.data;if(!Array.isArray(S.rivales))S.rivales=[];
+      try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+      if(!document.querySelector('.capa.on'))render();
+      estado('Sincronizado ✓');
+    }else if(local>nube&&(S.rivales.length||S.heroe))volcar();
+    else estado('Sincronizado ✓');
+  }catch(e){estado('Sin conexión · usando lo de este dispositivo')}
+}
+function sesion(s){
+  const antes=uid;
+  uid=s&&s.user?s.user.id:null;correo=s&&s.user?s.user.email:null;
+  if(uid&&uid!==antes)traer();
+  if(!uid)estado(NUBE?'Solo en este dispositivo · toca para sincronizar':'Guardado en este dispositivo');
+  if($('capa-cuenta').classList.contains('on'))pintarCuenta();
+}
+async function conectar(){
+  try{const c=localStorage.getItem(KEY);if(c){const x=JSON.parse(c);if(x&&Array.isArray(x.rivales))S=x}}catch(e){}
+  render();
+  if(!NUBE){estado('Guardado en este dispositivo');return}
+  estado('Conectando…');
+  sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  sb.auth.onAuthStateChange((ev,s)=>{sesion(s);if(ev==='SIGNED_IN'&&location.hash.includes('access_token'))history.replaceState(null,'',location.pathname)});
+  try{const {data}=await sb.auth.getSession();sesion(data.session)}catch(e){sesion(null)}
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){traer();render()}});
+window.addEventListener('online',()=>{traer()});
+setInterval(traer,60000);
+
+/* ---------- panel de cuenta y respaldos ---------- */
+function pintarCuenta(){
+  const c=$('cuenta-cuerpo');$('cu-error').textContent='';
+  if(!NUBE){
+    c.innerHTML=`<p class="sub">La sincronización todavía no está configurada. Llena <b>config.js</b> con los datos de tu proyecto de Supabase (la guía explica cómo). Mientras tanto todo se guarda en este dispositivo.</p>`;
+  }else if(uid){
+    c.innerHTML=`<p class="sub">Sincronizando como <b>${esc(correo||'')}</b>. Entra con el mismo correo en tus otros dispositivos.</p>
+      <div class="btns"><button type="button" class="btn" data-cu="sync">Sincronizar ahora</button><button type="button" class="btn" data-cu="salir">Cerrar sesión</button></div>`;
+  }else if(correoPend){
+    c.innerHTML=`<p class="sub">Te envié un correo a <b>${esc(correoPend)}</b>. Abre el enlace en este mismo dispositivo, o escribe aquí el código si tu correo trae uno.</p>
+      <label for="cu-codigo">Código</label><input id="cu-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456">
+      <div class="btns"><button type="button" class="btn" data-cu="otro">Usar otro correo</button><button type="button" class="btn pri" data-cu="codigo">Entrar</button></div>`;
+  }else{
+    c.innerHTML=`<p class="sub">Entra con tu correo para tener el mismo bestiario en el celular y en la computadora. Sin contraseña: te llega un enlace.</p>
+      <label for="cu-correo">Correo</label><input id="cu-correo" type="email" autocomplete="email" placeholder="tu@correo.com">
+      <div class="btns"><button type="button" class="btn pri" data-cu="enviar">Enviarme el enlace</button></div>`;
+  }
+}
+function abrirCuenta(){pintarCuenta();$('capa-cuenta').classList.add('on')}
+$('estado').onclick=abrirCuenta;
+$('cu-cerrar').onclick=()=>$('capa-cuenta').classList.remove('on');
+$('capa-cuenta').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-cu]');if(!b)return;const a=b.dataset.cu,err=$('cu-error');err.textContent='';
+  if(a==='enviar'){
+    const m=($('cu-correo').value||'').trim();if(!/^\S+@\S+\.\S+$/.test(m))return err.textContent='Escribe un correo válido.';
+    b.disabled=true;b.textContent='Enviando…';
+    const {error}=await sb.auth.signInWithOtp({email:m,options:{emailRedirectTo:location.origin+location.pathname}});
+    if(error){b.disabled=false;b.textContent='Enviarme el enlace';return err.textContent='No se pudo enviar: '+error.message}
+    correoPend=m;pintarCuenta();
+  }else if(a==='codigo'){
+    const t=($('cu-codigo').value||'').trim();if(!t)return err.textContent='Escribe el código.';
+    const {error}=await sb.auth.verifyOtp({email:correoPend,token:t,type:'email'});
+    if(error)return err.textContent='Código inválido o vencido.';
+    correoPend='';
+  }else if(a==='otro'){correoPend='';pintarCuenta()}
+  else if(a==='sync'){estado('Sincronizando…');await traer()}
+  else if(a==='salir'){await sb.auth.signOut();pintarCuenta()}
+  else if(a==='exportar'){
+    const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+    const u=URL.createObjectURL(blob),l=document.createElement('a');l.href=u;l.download='bestiario-'+hoy()+'.json';document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);
+  }else if(a==='importar')$('cu-archivo').click();
+});
+$('cu-archivo').addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;
+  try{
+    const x=JSON.parse(await f.text());
+    if(!x||!Array.isArray(x.rivales))throw 0;
+    if((S.rivales.length||S.heroe)&&!confirm('Esto reemplaza lo que tienes ahora en el Bestiario. ¿Seguir?'))return;
+    S=x;guardar();$('cu-error').textContent='';$('capa-cuenta').classList.remove('on');
+  }catch(_){$('cu-error').textContent='Ese archivo no parece un respaldo del Bestiario.'}
+});
+conectar();
+setInterval(()=>{if(!document.querySelector('.capa.on'))render()},60000);
+if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
