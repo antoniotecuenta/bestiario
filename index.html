@@ -467,9 +467,13 @@ function nivelDe(v){let L=1;while(v>=umbral(L+1))L++;return L}
 function rangoDe(L){return L<=RANGOS.length?RANGOS[L-1]:RANGOS[RANGOS.length-1]+' '+(L-RANGOS.length+1)}
 function heroeSprite(L){return EVOLUCION[Math.min(L,EVOLUCION.length)-1]}
 let subidaPendiente=null;
+// Las victorias se cuentan siempre desde los rivales que existen: si borras uno, se van sus victorias.
 function victoriasDe(h){
-  if(typeof h.victorias==='number')return h.victorias;
-  let n=0;for(const r of S.rivales){if(r.tipo==='jefe'){if(r.caidoEn)n++}else for(const k in (r.dias||{}))if(r.dias[k]>=r.vida)n++}
+  let n=0;
+  for(const r of S.rivales){
+    if(r.tipo==='jefe'){if(r.caidoEn)n++;for(const k in (r.dias||{}))if(k!==r.caidoEn&&guardiaVencida(r,k))n++}
+    else for(const k in (r.dias||{}))if(r.dias[k]>=vidaDia(r,k))n++;
+  }
   return n;
 }
 function nemesisLinea(){
