@@ -62,8 +62,27 @@ function nemesisHoy(S: H, hoy: string) {
   for (const x of S.nemesis || []) if (x.desde <= hoy) e = x;
   return e && e.id ? (S.rivales || []).find((r: H) => r.id === e.id) || null : null;
 }
+/* ---------- jefes con guardia (misma cuenta que la web) ---------- */
+const diaNum = (k: string) => { const [y, m, d] = k.split("-").map(Number); return Math.round(Date.UTC(y, m - 1, d) / 864e5); };
+const r2 = (n: number) => Math.round(n * 100) / 100;
+function cuota(r: H, k: string) {
+  if (r.tipo !== "jefe" || r.caidoEn) return 0;
+  let ini = r.vida - (r.dano || 0);
+  for (const d in r.dias || {}) if (d >= k) ini += r.dias[d];
+  if (ini <= 0) return 0;
+  let q: number;
+  if (r.fecha) { const dq = diaNum(r.fecha) - diaNum(k) + 1; q = ini / (dq > 0 ? dq : 7); }
+  else if (r.cuotaFija > 0) q = r.cuotaFija;
+  else return 0;
+  q = Number.isInteger(r.vida) ? Math.ceil(q) : r2(q);
+  return Math.min(q, ini);
+}
 function pendiente(r: H, hoy: string) {
-  if (r.tipo === "jefe") return !r.caidoEn;
+  if (r.tipo === "jefe") {
+    if (r.caidoEn) return false;
+    const q = cuota(r, hoy);
+    return q > 0 ? ((r.dias || {})[hoy] || 0) < q : true;
+  }
   return ((r.dias || {})[hoy] || 0) < r.vida;
 }
 
@@ -78,8 +97,21 @@ export function mensaje(S: H, ahora: number, tz: string) {
   const nem = nemesisHoy(S, hoy);
   const nemVivo = nem && pendiente(nem, hoy) ? nem : null;
   const n = Math.floor(ahora / 36e5);
-  const R = nemVivo ? nemVivo.nombre : vivos.length ? elegir(vivos, n).nombre : null;
+  const rival = nemVivo || (vivos.length ? elegir(vivos, n) : null);
+  const R = rival ? rival.nombre : null;
   const reciente = ahora - h.ultimo < 60 * 60000;
+  // si el rival es un jefe con guardia, el aviso habla de la guardia y de lo que falta hoy
+  const q = rival ? cuota(rival, hoy) : 0;
+  if (rival && q > 0 && v > 0) {
+    const falta = r2(q - ((rival.dias || {})[hoy] || 0));
+    const u = rival.unidad || "";
+    return {
+      title: reciente ? `${H} resiste al ${v} %` : v <= 25 ? `${H} está al ${v} %` : "Acabas de recibir un golpe",
+      body: nemVivo
+        ? `Hoy no cuenta hasta que caiga la guardia de ${R}: te faltan ${falta} ${u}.`
+        : elegir([`La guardia de ${R} sigue en pie: te faltan ${falta} ${u} hoy.`, `${H} va al ${v} %. A la guardia de ${R} le quedan ${falta} ${u}.`], n),
+    };
+  }
 
   if (v <= 0)
     return {

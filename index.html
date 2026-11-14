@@ -178,6 +178,21 @@ h1 span{color:var(--blood2)}
 .nem-l{margin-top:12px;font-size:17px;font-style:italic;color:#d9cbb1;border-left:2px solid var(--blood);padding-left:10px}
 .nem-l b{font-style:normal;color:var(--blood2)}
 .nem-l.ok{color:var(--gold);border-color:var(--gold)}
+.guardia{display:flex;gap:12px;align-items:center;margin-top:12px;padding:10px 12px;border:1px dashed #5a2a24;border-radius:10px;background:#160f0d}
+.guardia .sprite{flex:0 0 40px;height:40px}
+.guardia .sprite svg{width:28px;height:28px}
+.guardia.caida{border-color:#3a2c25;opacity:.75}
+.guardia.caida .sprite svg{animation:none;filter:grayscale(1) brightness(.6);transform:rotate(90deg)}
+.guardia .gi{flex:1;min-width:0}
+.guardia .gn{font-size:16px;font-weight:600}
+.guardia .gt{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:2px}
+.guardia .barra{height:7px;margin-top:6px}
+.meta-l{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-top:8px;line-height:1.6}
+.meta-l b{color:var(--gold);font-weight:500}
+.meta-l .tarde{color:#ff8a6a}
+.panel textarea{width:100%;background:#120e0d;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:15px var(--mono);color:var(--paper);min-height:84px;resize:vertical}
+.panel textarea:focus{outline:none;border-color:var(--gold)}
+.solo-jefe{display:none}.solo-jefe.on{display:block}
 .nuevo{width:100%;border:1px dashed #5a463b;border-radius:14px;padding:16px;color:var(--dim);font-size:19px;font-style:italic}
 .nuevo:hover{color:var(--paper);border-color:var(--gold)}
 
@@ -280,6 +295,16 @@ label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.1em;t
     <div class="fila">
       <div><label for="f-vida">Vida</label><input id="f-vida" inputmode="decimal" placeholder="Ej.: 30"></div>
       <div><label for="f-unidad">Unidad</label><input id="f-unidad" maxlength="12" placeholder="minutos, páginas…"></div>
+    </div>
+    <div class="solo-jefe" id="f-jefe">
+      <label for="f-fecha">Fecha límite (opcional)</label>
+      <input id="f-fecha" type="date">
+      <label for="f-cuota">Cuota diaria (si no pones fecha)</label>
+      <input id="f-cuota" inputmode="decimal" placeholder="Ej.: 20">
+      <p class="ayuda">Con fecha o cuota, el jefe trae una guardia cada mañana. Vencerla gana el día.</p>
+      <label for="f-etapas">Etapas (opcional, una por línea)</label>
+      <textarea id="f-etapas" placeholder="Escaleta = 10&#10;Primer borrador = 120&#10;Reescritura = 60"></textarea>
+      <p class="ayuda">Si pones etapas, la vida del jefe es la suma.</p>
     </div>
     <label for="f-g1">Golpes rápidos</label>
     <div class="fila golpes-f"><input id="f-g1" inputmode="decimal" placeholder="Ej.: 5"><input id="f-g2" inputmode="decimal" placeholder="10"><input id="f-g3" inputmode="decimal" placeholder="—"></div>
@@ -451,7 +476,9 @@ function nemesisLinea(){
   const e=nemesisEn(hoy()),n=nemesisHoy();
   if(!e||!n)return `<p class="nem-l">Elige un némesis: el día solo contará si lo derrotas. Que sea el demonio que más te cuesta vencer. Si no eliges ninguno, cualquier demonio que derrotes contará como victoria.</p>`;
   if(n.tipo==='jefe'&&n.caidoEn&&n.caidoEn<hoy())return `<p class="nem-l">Tu némesis, ${esc(n.nombre)}, cayó para siempre. Elige otro.</p>`;
-  if(cumpleNemesis(n,hoy()))return `<p class="nem-l ok">Tu némesis, ${esc(n.nombre)}, ${n.tipo==='jefe'?'recibió su golpe':'cayó'} hoy. El día cuenta.</p>`;
+  const conG=n.tipo==='jefe'&&cuota(n,hoy())>0;
+  if(cumpleNemesis(n,hoy()))return `<p class="nem-l ok">${conG?`Venciste a la guardia de ${esc(n.nombre)}, tu némesis`:`Tu némesis, ${esc(n.nombre)}, ${n.tipo==='jefe'?'recibió su golpe':'cayó'} hoy`}. El día cuenta.</p>`;
+  if(conG)return `<p class="nem-l">El día no cuenta hasta que caiga <b>la guardia de ${esc(n.nombre)}</b>.</p>`;
   return `<p class="nem-l">El día no cuenta hasta que ${n.tipo==='jefe'?'golpees a':'caiga'} <b>${esc(n.nombre)}</b>.</p>`;
 }
 function heroeHTML(){
@@ -513,8 +540,8 @@ const restante=(r,k)=>Math.max(0,r2(vidaDia(r,k)-danoDe(r,k)));
 function nemesisEn(k){let e=null;for(const x of (S.nemesis||[]))if(x.desde<=k)e=x;return e&&e.id?e:null}
 function nemesisHoy(){const e=nemesisEn(hoy());return e?S.rivales.find(x=>x.id===e.id)||null:null}
 const esNemesis=r=>{const n=nemesisHoy();return !!n&&n.id===r.id};
-function hayVictoria(k){for(const r of S.rivales){if(r.tipo==='jefe'){if(r.caidoEn===k)return true}else if(((r.dias||{})[k]||0)>=vidaDia(r,k))return true}return false}
-function cumpleNemesis(r,k){if(r.tipo==='jefe')return r.caidoEn===k||((r.dias||{})[k]||0)>0;return ((r.dias||{})[k]||0)>=vidaDia(r,k)}
+function hayVictoria(k){for(const r of S.rivales){if(r.tipo==='jefe'){if(r.caidoEn===k||guardiaVencida(r,k))return true}else if(((r.dias||{})[k]||0)>=vidaDia(r,k))return true}return false}
+function cumpleNemesis(r,k){if(r.tipo==='jefe'){if(r.caidoEn===k)return true;if(cuota(r,k)>0)return guardiaVencida(r,k);return ((r.dias||{})[k]||0)>0}return ((r.dias||{})[k]||0)>=vidaDia(r,k)}
 function diaCuenta(k){
   const e=nemesisEn(k);if(!e)return hayVictoria(k);
   const r=S.rivales.find(x=>x.id===e.id);
@@ -522,6 +549,49 @@ function diaCuenta(k){
   return cumpleNemesis(r,k);
 }
 const vencidoHoy=r=>restante(r)<=0;
+/* ---------- jefes con guardia ---------- */
+const ESBIRRO={"id":"esbirro","pal":{"k":"#140a08","r":"#8a2a1e","R":"#5a160e","y":"#ffd23a","w":"#f4f0e0"},"px":["................","...k........k...","..krk......krk..","..krRk....kRrk..","...krrkkkkrrk...","...krrrrrrrrk...","..krryyrryyrrk..","..krrykrrykrrk..","..krrrrrrrrrrk..","...krrwkwkrrk...","...kRrrrrrrRk...","..kkkRrrrrRkkk..",".krk.kRrrRk.krk.","..k..kRkkRk..k..",".....kk..kk.....","................"]};
+const tieneGuardia=r=>r.tipo==='jefe'&&!r.caidoEn&&(!!r.fecha||r.cuotaFija>0);
+function restInicio(r,k){let x=r.vida-(r.dano||0);for(const d in (r.dias||{}))if(d>=k)x+=r.dias[d];return r2(x)}
+function diasQuedan(r,k){return r.fecha?diaNum(r.fecha)-diaNum(k)+1:null}
+function cuota(r,k){
+  k=k||hoy();if(r.tipo!=='jefe'||(r.caidoEn&&r.caidoEn<k))return 0;
+  if(r.creado&&k<r.creado)return 0;
+  const ini=restInicio(r,k);if(ini<=0)return 0;
+  let q;if(r.fecha){const dq=diasQuedan(r,k);q=ini/(dq>0?dq:7)}else if(r.cuotaFija>0)q=r.cuotaFija;else return 0;
+  q=Number.isInteger(r.vida)?Math.ceil(q):r2(q);return Math.min(q,ini);
+}
+const guardiaVencida=(r,k)=>{const q=cuota(r,k);return q>0&&(((r.dias||{})[k]||0)>=q)};
+const rachaJefe=r=>rachaFlex(k=>guardiaVencida(r,k));
+function etapasDe(r){const out=[];let acc=0;for(const e of (r.etapas||[])){out.push({nombre:e.nombre,vida:e.vida,ini:acc,fin:r2(acc+e.vida)});acc=r2(acc+e.vida)}return out}
+function etapaActual(r){const d=r.dano||0,es=etapasDe(r);for(let i=0;i<es.length;i++)if(d<es[i].fin)return {i,n:es.length,...es[i]};return null}
+function etapasCaidasEn(r,k){
+  const es=etapasDe(r);if(es.length<2)return [];
+  const dias=Object.keys(r.dias||{}).sort();let acc=r.vida-restInicio(r,dias[0]||k);const out=[];
+  for(const d of dias){const antes=acc;acc=r2(acc+r.dias[d]);if(d===k)for(const e of es.slice(0,-1))if(antes<e.fin&&acc>=e.fin)out.push(e)}
+  return out;
+}
+function guardiaHTML(r){
+  if(!tieneGuardia(r))return '';
+  const k=hoy(),q=cuota(r,k),hecho=(r.dias||{})[k]||0,falta=r2(Math.max(0,q-hecho)),venc=hecho>=q,pct=venc?0:Math.max(0,falta/q*100);
+  return `<div class="guardia ${venc?'caida':''}"><div class="sprite">${spriteSVG(ESBIRRO,0)}</div><div class="gi">
+    <div class="gn">${venc?'Guardia vencida':'Guardia de hoy'}</div>
+    <div class="gt">${venc?'El día cuenta para este jefe.':`Te faltan ${fmt(falta)} de ${fmt(q)} ${esc(r.unidad)}`}</div>
+    <div class="barra"><div class="relleno" style="width:${pct}%"></div></div></div></div>`;
+}
+function metaHTML(r){
+  if(r.tipo!=='jefe')return '';
+  const ls=[],e=etapaActual(r);
+  if(e&&e.n>1)ls.push(`Etapa <b>${e.i+1} de ${e.n}</b>: ${esc(e.nombre)} · ${fmt(r2((r.dano||0)-e.ini))}/${fmt(e.vida)}`);
+  if(r.fecha){const dq=diasQuedan(r,hoy()),f=fechaLarga(r.fecha);ls.push(dq>0?`Fecha límite: <b>${f}</b> · ${dq===1?'hoy es el último día':'quedan '+dq+' días'}`:`<span class="tarde">La fecha (${f}) ya pasó. Edita el jefe y ponle una nueva; mientras, la cuota se calcula a 7 días.</span>`)}
+  else if(r.cuotaFija>0)ls.push(`Cuota fija: <b>${fmt(r.cuotaFija)} ${esc(r.unidad)}</b> al día`);
+  return ls.length?`<div class="meta-l">${ls.join('<br>')}</div>`:'';
+}
+function rachaJefeHTML(r){
+  if(!tieneGuardia(r))return '';
+  let d='';for(let i=13;i>=0;i--){const k=claveDia(i),q=cuota(r,k),x=(r.dias||{})[k]||0;d+=`<span class="dia ${q>0&&x>=q?'ganado':x>0?'parcial':''} ${i===0?'hoy':''}" title="${k}"></span>`}
+  return `<div class="racha"><div class="dias">${d}</div><div class="racha-n">Racha <b>${rachaJefe(r)}</b></div></div>${enPeligro(k=>guardiaVencida(r,k))?'<p class="riesgo">Ayer la guardia te ganó. Hoy no puedes fallar.</p>':''}`;
+}
 function racha(r){return rachaFlex(k=>danoDe(r,k)>=vidaDia(r,k))}
 function burlaDe(r){
   if(r.tipo==='diario'&&vencidoHoy(r))return{t:elegir(ANIMOS.vencido,r.id+hoy()),g:true};
@@ -568,13 +638,14 @@ const sprite=r=>spriteSVG(spriteDe(r),etapaDe(r));
 function golpear(id,n,el){
   const r=S.rivales.find(x=>x.id===id);if(!r||!(n>0))return;
   if(r.tipo==='jefe'&&r.caidoEn)return;
-  const antes=restante(r),k=hoy(),vBase=S.heroe?victoriasDe(S.heroe):0,dBase=diasBatalla();
+  const antes=restante(r),k=hoy(),vBase=S.heroe?victoriasDe(S.heroe):0,dBase=diasBatalla(),gAntes=tieneGuardia(r)&&!guardiaVencida(r,k);
   if(r.tipo==='diario'){r.dias=r.dias||{};r.dias[k]=r2((r.dias[k]||0)+n);podar(r)}
   else{r.dano=r2((r.dano||0)+n);r.dias=r.dias||{};r.dias[k]=r2((r.dias[k]||0)+n);podar(r)}
   r.hist=(r.hist||[]).concat({t:Date.now(),n:n,d:k}).slice(-40);
   const despues=restante(r);
   if(antes>0&&despues<=0&&r.tipo==='jefe')r.caidoEn=k;
-  const gano=antes>0&&despues<=0;
+  const cayoGuardia=gAntes&&guardiaVencida(r,k)&&despues>0;
+  const gano=(antes>0&&despues<=0)||cayoGuardia;
   const res=S.heroe?curarHeroe(CURA_GOLPE+(gano?CURA_VICTORIA:0)):null;
   if(S.heroe&&gano){{const dN=diasBatalla();if(nivelDe(dN)>nivelDe(dBase))subidaPendiente=nivelDe(dN)}S.heroe.victorias=vBase+1;r.hist[r.hist.length-1].v=1}
   if(res)r.hist[r.hist.length-1].c=res.cura;
@@ -583,6 +654,7 @@ function golpear(id,n,el){
   if(res&&res.cura>0)animarCura(res.cura);
   if(gano){const c=$('heroe-card');if(c){c.classList.remove('gana');void c.offsetWidth;c.classList.add('gana')}}
   if(antes>0&&despues<=0)setTimeout(()=>mostrarDerrota(r),450);
+  else if(cayoGuardia)setTimeout(()=>mostrarGuardia(r),450);
 }
 function animarCura(c){const card=$('heroe-card');if(!card)return;card.classList.remove('curado');void card.offsetWidth;card.classList.add('curado');const f=document.createElement('div');f.className='cura';f.textContent='+'+fmt(c);card.appendChild(f);setTimeout(()=>f.remove(),950)}
 function podar(r){const lim=claveDia(400);for(const k in r.dias)if(k<lim)delete r.dias[k]}
@@ -609,10 +681,12 @@ function trofeosDe(k){
   const out=[];
   for(const r of S.rivales){if(!pasaFiltro(r))continue;
     if(r.tipo==='diario'){const d=(r.dias||{})[k];if(d!=null&&d>=vidaDia(r,k))out.push({r,cant:d})}
-    else if(r.caidoEn===k)out.push({r,cant:r.vida})}
+    else{if(r.caidoEn===k)out.push({r,cant:r.vida});
+      else if(guardiaVencida(r,k))out.push({r,cant:(r.dias||{})[k],guardia:true});
+      for(const e of etapasCaidasEn(r,k))out.push({r,cant:e.vida,etapa:e.nombre})}}
   return out;
 }
-const cabeza=r=>`<span class="cabeza" title="${esc(r.nombre)}">${spriteSVG(spriteDe(r),0)}<i></i></span>`;
+const cabeza=(r,t)=>`<span class="cabeza" title="${esc(t&&t.guardia?'Guardia de '+r.nombre:r.nombre)}">${spriteSVG(t&&t.guardia?ESBIRRO:spriteDe(r),0)}<i></i></span>`;
 function renderTrofeos(){
   $('filtros-t').innerHTML=filtrosHTML();
   const hoyK=hoy(),[hy,hm]=hoyK.split('-').map(Number);
@@ -625,14 +699,14 @@ function renderTrofeos(){
   for(let d=1;d<=dias;d++){
     const k=y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'),ts=trofeosDe(k);
     total+=ts.length;if(ts.length)diasConTrofeo++;
-    const max=4,cab=ts.slice(0,max).map(t=>cabeza(t.r)).join('')+(ts.length>max?`<span class="mas">+${ts.length-max}</span>`:'');
+    const max=4,cab=ts.slice(0,max).map(t=>cabeza(t.r,t)).join('')+(ts.length>max?`<span class="mas">+${ts.length-max}</span>`:'');
     h+=`<button class="celda ${k===hoyK?'hoy':''} ${k===diaSel?'sel':''} ${k>hoyK?'futuro':''}" data-act="dia" data-k="${k}"><span class="n">${d}</span><span class="cabezas">${cab}</span></button>`;
   }
   $('cal').innerHTML=h;
   $('mes-resumen').innerHTML=total?`<b>${total}</b> ${total===1?'cabeza':'cabezas'} en <b>${diasConTrofeo}</b> ${diasConTrofeo===1?'día':'días'}`:'Este mes la pared sigue vacía.';
   if(diaSel&&diaSel.slice(0,7)===y+'-'+String(m).padStart(2,'0')){
     const ts=trofeosDe(diaSel);
-    $('dia-detalle').innerHTML=`<h4>${fechaLarga(diaSel)}</h4>`+(ts.length?ts.map(t=>`<div class="trofeo"><div class="placa">${spriteSVG(spriteDe(t.r),0)}</div><div><div class="t1">${esc(t.r.nombre)}</div><div class="t2">${t.r.tipo==='jefe'?'Jefe derrotado':'Vencido ese día'} · ${fmt(t.cant)} ${esc(t.r.unidad)}</div></div></div>`).join(''):'<p class="sin">Ese día no cayó nadie.</p>');
+    $('dia-detalle').innerHTML=`<h4>${fechaLarga(diaSel)}</h4>`+(ts.length?ts.map(t=>`<div class="trofeo"><div class="placa">${spriteSVG(t.guardia?ESBIRRO:spriteDe(t.r),0)}</div><div><div class="t1">${esc(t.guardia?'Guardia de '+t.r.nombre:t.etapa?t.etapa:t.r.nombre)}</div><div class="t2">${t.guardia?'Guardia vencida':t.etapa?'Etapa vencida de '+esc(t.r.nombre):t.r.tipo==='jefe'?'Jefe derrotado':'Vencido ese día'} · ${fmt(t.cant)} ${esc(t.r.unidad)}</div></div></div>`).join(''):'<p class="sin">Ese día no cayó nadie.</p>');
   }else $('dia-detalle').innerHTML='';
 }
 function vista(){return location.hash==='#trofeos'?'trofeos':'batalla'}
@@ -668,10 +742,12 @@ function render(){
         <button class="menu-btn" data-act="menu" aria-label="Opciones">⋯</button></div>
       <div class="vida"><div class="barra"><div class="relleno" style="width:${pct}%"></div></div>
         <div class="nums"><span>Vida <b>${fmt(rest)}</b> / ${fmt(VH)} ${esc(r.unidad)}</span><span>${r.tipo==='diario'?'Hoy: ':'Daño: '}${fmt(danoDe(r))}</span></div></div>
+      ${metaHTML(r)}
+      ${guardiaHTML(r)}
       <p class="burla ${b.g?'ganada':''} ${b.b?'suya':''}">${esc(b.t)}</p>
       <div class="golpes">${(r.golpes||[]).map(g=>`<button class="g" data-act="golpe" data-n="${g}"><small>golpe</small>${fmt(g)} ${esc(r.unidad)}</button>`).join('')}<button class="g otro" data-act="otro"><small>otro</small>…</button></div>
       <div class="otro-form ${otroAbierto===r.id?'on':''}"><input inputmode="decimal" placeholder="Cantidad" data-otro="${r.id}"><button class="g" data-act="otro-ok"><small>golpe</small>Dar</button></div>
-      ${r.tipo==='diario'?rachaHTML(r):''}
+      ${r.tipo==='diario'?rachaHTML(r):rachaJefeHTML(r)}
       <div class="acciones ${abierto===r.id?'on':''}">
         <button data-act="deshacer" ${r.hist&&r.hist.length?'':'disabled style="opacity:.4"'}>Deshacer último golpe</button>
         <button data-act="nemesis">${nem?'Quitar némesis':'Hacer némesis'}</button>
@@ -700,6 +776,16 @@ function animar(id,n,el){
   const cr=card.getBoundingClientRect();
   if(el&&el.getBoundingClientRect){const br=el.getBoundingClientRect();f.style.left=(br.left-cr.left+br.width/2-14)+'px';f.style.top=(br.top-cr.top-10)+'px'}else{f.style.right='24px';f.style.top='70px'}
   card.appendChild(f);setTimeout(()=>f.remove(),950);
+}
+function mostrarGuardia(r){
+  $('d-ok').textContent='Seguir';
+  $('d-k').textContent=(esNemesis(r)?'Guardia de tu némesis vencida':'Guardia vencida')+' · el día cuenta';
+  $('d-sprite').innerHTML=spriteSVG(ESBIRRO,2);
+  $('d-n').textContent='Guardia de '+r.nombre;
+  $('d-e').textContent=`${r.nombre} se queda sin escolta hasta mañana. Le quedan ${fmt(restante(r))} ${r.unidad}.`;
+  $('d-frase').innerHTML=fraseHTML(elegir(FRASES,r.id+hoy()+'g'));
+  if(S.heroe)$('d-k').textContent+=' · victoria n.º '+victoriasDe(S.heroe);
+  $('derrota').classList.remove('sube');$('derrota').classList.add('on');
 }
 function mostrarDerrota(r){
   const jefe=r.tipo==='jefe';
@@ -766,14 +852,15 @@ $('form-h').addEventListener('submit',e=>{
 });
 
 /* ---------- formulario ---------- */
-function setTipo(t){tipoSel=t;document.querySelectorAll('.tipos button').forEach(b=>b.classList.toggle('sel',b.dataset.tipo===t))}
+function setTipo(t){tipoSel=t;document.querySelectorAll('.tipos button').forEach(b=>b.classList.toggle('sel',b.dataset.tipo===t));$('f-jefe').classList.toggle('on',t==='jefe')}
+function leerEtapas(){const out=[];for(const l of $('f-etapas').value.split('\n')){const m=l.match(/^(.+?)\s*[=:]\s*([\d.,]+)\s*$/);if(m){const v=parseFloat(m[2].replace(',','.'));if(v>0)out.push({nombre:m[1].trim().slice(0,40),vida:r2(v)})}else if(l.trim())return null}return out}
 document.querySelectorAll('.tipos button').forEach(b=>b.onclick=()=>setTipo(b.dataset.tipo));
 function setSprite(id){spriteSel=id;document.querySelectorAll('#aspectos button').forEach(b=>b.classList.toggle('sel',b.dataset.sp===id))}
 $('aspectos').innerHTML=SPRITES.map(sp=>`<button type="button" data-sp="${sp.id}" aria-label="${sp.id}">${spriteSVG(sp)}</button>`).join('');
 $('aspectos').addEventListener('click',e=>{const b=e.target.closest('[data-sp]');if(b)setSprite(b.dataset.sp)});
 function pintarSugeridas(){const cur=$('f-etiquetas').value.split(',').map(normEt);$('f-sugeridas').innerHTML=todasEtiquetas().filter(t=>!cur.includes(t)).map(t=>`<button type="button" class="chip" data-act="sug" data-t="${esc(t)}">+ ${esc(t)}</button>`).join('')}
 $('f-etiquetas').addEventListener('input',pintarSugeridas);
-function llenar(r){$('f-etiquetas').value=(r.etiquetas||[]).join(', ');setSprite(r.sprite||(r.nombre?spriteDe(r).id:SPRITES[Math.floor(Math.random()*SPRITES.length)].id));$('f-nombre').value=r.nombre||'';$('f-epiteto').value=r.epiteto||'';$('f-vida').value=r.vida!=null?String(r.vida).replace('.',','):'';$('f-unidad').value=r.unidad||'';['f-g1','f-g2','f-g3'].forEach((id,i)=>{const g=(r.golpes||[])[i];$(id).value=g!=null?String(g).replace('.',','):''});$('f-burla').value=r.burla||'';setTipo(r.tipo||'diario')}
+function llenar(r){$('f-etiquetas').value=(r.etiquetas||[]).join(', ');setSprite(r.sprite||(r.nombre?spriteDe(r).id:SPRITES[Math.floor(Math.random()*SPRITES.length)].id));$('f-nombre').value=r.nombre||'';$('f-epiteto').value=r.epiteto||'';$('f-vida').value=r.vida!=null?String(r.vida).replace('.',','):'';$('f-unidad').value=r.unidad||'';['f-g1','f-g2','f-g3'].forEach((id,i)=>{const g=(r.golpes||[])[i];$(id).value=g!=null?String(g).replace('.',','):''});$('f-burla').value=r.burla||'';$('f-fecha').value=r.fecha||'';$('f-cuota').value=r.cuotaFija?String(r.cuotaFija).replace('.',','):'';$('f-etapas').value=(r.etapas||[]).map(e=>e.nombre+' = '+String(e.vida).replace('.',',')).join('\n');setTipo(r.tipo||'diario')}
 function abrirForm(r){
   editando=r?r.id:null;$('f-error').textContent='';
   $('f-titulo').textContent=r?'Editar rival':'Nuevo rival';
@@ -787,12 +874,16 @@ function abrirForm(r){
 $('f-cancelar').onclick=()=>$('capa').classList.remove('on');
 $('form').addEventListener('submit',e=>{
   e.preventDefault();
-  const nombre=$('f-nombre').value.trim(),vida=parseFloat($('f-vida').value.replace(',','.'));
+  const nombre=$('f-nombre').value.trim();let vida=parseFloat($('f-vida').value.replace(',','.'));
+  const etapas=tipoSel==='jefe'?leerEtapas():[];
+  if(etapas===null)return $('f-error').textContent='Escribe cada etapa así: Nombre = cantidad.';
+  if(etapas.length)vida=r2(etapas.reduce((a,e)=>a+e.vida,0));
+  const fecha=tipoSel==='jefe'?$('f-fecha').value:'',cuotaFija=tipoSel==='jefe'?parseFloat(($('f-cuota').value||'').replace(',','.'))||0:0;
   const golpes=[...new Set(['f-g1','f-g2','f-g3'].map(id=>parseFloat($(id).value.replace(',','.'))).filter(x=>x>0))];
   if(!nombre)return $('f-error').textContent='Todo rival necesita un nombre.';
   if(!(vida>0))return $('f-error').textContent='La vida tiene que ser un número mayor que cero.';
   if(!golpes.length)return $('f-error').textContent='Agrega al menos un golpe rápido.';
-  const datos={nombre,epiteto:$('f-epiteto').value.trim(),tipo:tipoSel,vida:r2(vida),unidad:$('f-unidad').value.trim(),golpes,burla:$('f-burla').value.trim(),sprite:spriteSel,etiquetas:[...new Set($('f-etiquetas').value.split(',').map(normEt).filter(Boolean))].slice(0,6)};
+  const datos={nombre,epiteto:$('f-epiteto').value.trim(),tipo:tipoSel,vida:r2(vida),unidad:$('f-unidad').value.trim(),golpes,burla:$('f-burla').value.trim(),sprite:spriteSel,fecha:fecha||null,cuotaFija:cuotaFija>0?r2(cuotaFija):null,etapas:etapas.length?etapas:null,etiquetas:[...new Set($('f-etiquetas').value.split(',').map(normEt).filter(Boolean))].slice(0,6)};
   if(editando){const r=S.rivales.find(x=>x.id===editando);Object.assign(r,datos);if(r.tipo==='jefe'&&r.dano==null)r.dano=0;if(r.tipo==='diario'&&!r.dias)r.dias={};if(r.tipo==='jefe'&&restante(r)>0)r.caidoEn=null}
   else S.rivales.push(Object.assign({id:nid(),creado:hoy(),dias:{},dano:0,hist:[],caidoEn:null},datos));
   $('capa').classList.remove('on');abierto=null;guardar();
