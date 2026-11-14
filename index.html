@@ -864,9 +864,10 @@ function pintarCuenta(){
       <label for="cu-codigo">Código</label><input id="cu-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456">
       <div class="btns"><button type="button" class="btn" data-cu="otro">Usar otro correo</button><button type="button" class="btn pri" data-cu="codigo">Entrar</button></div>`;
   }else{
-    c.innerHTML=`<p class="sub">Entra con tu correo para tener el mismo bestiario en el celular y en la computadora. Sin contraseña: te llega un enlace.</p>
-      <label for="cu-correo">Correo</label><input id="cu-correo" type="email" autocomplete="email" placeholder="tu@correo.com">
-      <div class="btns"><button type="button" class="btn pri" data-cu="enviar">Enviarme el enlace</button></div>`;
+    c.innerHTML=`<p class="sub">Entra para tener el mismo bestiario en el celular y en la computadora.</p>
+      <div class="btns"><button type="button" class="btn pri" data-cu="github">Entrar con GitHub</button></div>
+      <label for="cu-correo">O con tu correo</label><input id="cu-correo" type="email" autocomplete="email" placeholder="tu@correo.com">
+      <div class="btns" style="margin-top:10px"><button type="button" class="btn" data-cu="enviar">Enviarme el enlace</button></div>`;
   }
 }
 /* ---------- avisos cada hora ---------- */
@@ -899,7 +900,11 @@ $('estado').onclick=abrirCuenta;
 $('cu-cerrar').onclick=()=>$('capa-cuenta').classList.remove('on');
 $('capa-cuenta').addEventListener('click',async e=>{
   const b=e.target.closest('[data-cu]');if(!b)return;const a=b.dataset.cu,err=$('cu-error');err.textContent='';
-  if(a==='enviar'){
+  if(a==='github'){
+    b.disabled=true;b.textContent='Abriendo GitHub…';
+    const {error}=await sb.auth.signInWithOAuth({provider:'github',options:{redirectTo:location.origin+location.pathname}});
+    if(error){b.disabled=false;b.textContent='Entrar con GitHub';err.textContent='No se pudo abrir GitHub: '+error.message}
+  }else if(a==='enviar'){
     const m=($('cu-correo').value||'').trim();if(!/^\S+@\S+\.\S+$/.test(m))return err.textContent='Escribe un correo válido.';
     b.disabled=true;b.textContent='Enviando…';
     const {error}=await sb.auth.signInWithOtp({email:m,options:{emailRedirectTo:location.origin+location.pathname}});
