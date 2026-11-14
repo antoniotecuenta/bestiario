@@ -1,5 +1,5 @@
 // Bestiario: funciona sin internet. La página se pide primero a la red; si no hay, sale de la caché.
-const CACHE = 'bestiario-v1';
+const CACHE = 'bestiario-v2';
 const BASE = ['./', 'index.html', 'config.js', 'supabase.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASE)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {
@@ -16,4 +16,20 @@ self.addEventListener('fetch', e => {
       return res;
     }).catch(() => caches.match(r, { ignoreSearch: true }).then(m => m || caches.match('index.html')))
   );
+});
+
+// Avisos de cada hora
+self.addEventListener('push', e => {
+  let m = { title: 'Bestiario', body: 'Tu demonio te espera.' };
+  try { m = Object.assign(m, e.data.json()); } catch (_) {}
+  e.waitUntil(self.registration.showNotification(m.title, {
+    body: m.body, icon: 'icon-192.png', badge: 'icon-192.png', tag: 'bestiario', renotify: true, lang: 'es'
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ws => {
+    for (const w of ws) if ('focus' in w) return w.focus();
+    return self.clients.openWindow('./');
+  }));
 });

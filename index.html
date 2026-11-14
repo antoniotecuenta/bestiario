@@ -333,6 +333,7 @@ label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.1em;t
     <h3>Tu cuenta</h3>
     <div id="cuenta-cuerpo"></div>
     <p class="error" id="cu-error"></p>
+    <div id="avisos-caja"></div>
     <label>Respaldos</label>
     <div class="btns" style="margin-top:6px"><button type="button" class="btn" data-cu="exportar">Exportar</button><button type="button" class="btn" data-cu="importar">Importar</button></div>
     <input type="file" id="cu-archivo" accept="application/json,.json" hidden>
@@ -852,7 +853,7 @@ setInterval(traer,60000);
 
 /* ---------- panel de cuenta y respaldos ---------- */
 function pintarCuenta(){
-  const c=$('cuenta-cuerpo');$('cu-error').textContent='';
+  const c=$('cuenta-cuerpo');$('cu-error').textContent='';pintarAvisos();
   if(!NUBE){
     c.innerHTML=`<p class="sub">La sincronización todavía no está configurada. Llena <b>config.js</b> con los datos de tu proyecto de Supabase (la guía explica cómo). Mientras tanto todo se guarda en este dispositivo.</p>`;
   }else if(uid){
@@ -868,6 +869,31 @@ function pintarCuenta(){
       <div class="btns"><button type="button" class="btn pri" data-cu="enviar">Enviarme el enlace</button></div>`;
   }
 }
+/* ---------- avisos cada hora ---------- */
+const FN=(CFG.supabaseUrl||'')+'/functions/v1/avisar';
+const pushOk=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+async function subActual(){try{const r=await navigator.serviceWorker.getRegistration();return r?await r.pushManager.getSubscription():null}catch(e){return null}}
+function b64u(s){const p='='.repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0))}
+async function pintarAvisos(){
+  const c=$('avisos-caja');if(!c)return;
+  if(!NUBE||!uid){c.innerHTML='';return}
+  if(!pushOk()){c.innerHTML=`<label>Avisos</label><p class="sub">Este navegador no permite avisos.</p>`;return}
+  const s=await subActual(),on=!!s&&Notification.permission==='granted';
+  c.innerHTML=`<label>Avisos</label><p class="sub">${on?'Te aviso cada hora cómo va tu héroe, salvo en tus horas de descanso.':'Recibe cada hora un aviso con el estado de tu héroe y el rival que te espera.'}</p>
+    <div class="btns" style="margin-top:6px">${on?'<button type="button" class="btn" data-cu="avisos-off">Apagar</button><button type="button" class="btn" data-cu="avisos-prueba">Probar ahora</button>':'<button type="button" class="btn pri" data-cu="avisos-on">Activar avisos</button>'}</div>`;
+}
+async function activarAvisos(){
+  const p=await Notification.requestPermission();
+  if(p!=='granted')throw new Error('Necesito tu permiso para mandarte avisos. Revísalo en los ajustes del navegador.');
+  const reg=await navigator.serviceWorker.ready;
+  let s=await reg.pushManager.getSubscription();
+  if(!s){const {publicKey}=await fetch(FN+'?clave=1',{headers:{apikey:CFG.supabaseAnonKey}}).then(r=>r.json());s=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(publicKey)})}
+  const j=s.toJSON();
+  const {error}=await sb.from('push_subs').upsert({endpoint:j.endpoint,user_id:uid,sub:j,tz:Intl.DateTimeFormat().resolvedOptions().timeZone||'America/Guayaquil'});
+  if(error)throw new Error('No pude guardar tu suscripción: '+error.message);
+}
+async function apagarAvisos(){const s=await subActual();if(s){await sb.from('push_subs').delete().eq('endpoint',s.endpoint);await s.unsubscribe()}}
+async function probarAvisos(){const s=await subActual();if(!s)return;await fetch(FN,{method:'POST',headers:{'Content-Type':'application/json',apikey:CFG.supabaseAnonKey},body:JSON.stringify({prueba:true,endpoint:s.endpoint})})}
 function abrirCuenta(){pintarCuenta();$('capa-cuenta').classList.add('on')}
 $('estado').onclick=abrirCuenta;
 $('cu-cerrar').onclick=()=>$('capa-cuenta').classList.remove('on');
@@ -886,6 +912,9 @@ $('capa-cuenta').addEventListener('click',async e=>{
     correoPend='';
   }else if(a==='otro'){correoPend='';pintarCuenta()}
   else if(a==='sync'){estado('Sincronizando…');await traer()}
+  else if(a==='avisos-on'){b.disabled=true;b.textContent='Activando…';try{await activarAvisos();await probarAvisos()}catch(x){err.textContent=x.message||'No se pudieron activar los avisos.'}pintarAvisos()}
+  else if(a==='avisos-off'){await apagarAvisos();pintarAvisos()}
+  else if(a==='avisos-prueba'){b.disabled=true;b.textContent='Enviando…';await probarAvisos();setTimeout(()=>{b.disabled=false;b.textContent='Probar ahora'},2500)}
   else if(a==='salir'){await sb.auth.signOut();pintarCuenta()}
   else if(a==='exportar'){
     const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
