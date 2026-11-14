@@ -122,52 +122,54 @@ export function mensaje(S: H, ahora: number, tz: string) {
   const n = Math.floor(ahora / 36e5);
   const rival = nemVivo || (vivos.length ? elegir(vivos, n) : null);
   const R = rival ? rival.nombre : null;
-  const reciente = ahora - h.ultimo < 60 * 60000;
-  // si el rival es un jefe con guardia, el aviso habla de la guardia y de lo que falta hoy
+  // "reciente" solo si de verdad golpeaste a alguien en la última hora (no por editar el héroe)
+  let ultGolpe = 0;
+  for (const r of S.rivales || []) for (const x of r.hist || []) if (x.t > ultGolpe) ultGolpe = x.t;
+  const reciente = ahora - ultGolpe < 60 * 60000;
   const q = rival ? cuota(rival, hoy) : 0;
-  if (rival && q > 0 && v > 0) {
-    const falta = r2(q - ((rival.dias || {})[hoy] || 0));
-    const u = rival.unidad || "";
-    return {
-      title: reciente ? `${H} resiste al ${v} %` : v <= 25 ? `${H} está al ${v} %` : "Acabas de recibir un golpe",
-      body: nemVivo
-        ? `Hoy no cuenta hasta que caiga la guardia de ${R}: te faltan ${falta} ${u}.`
-        : elegir([`La guardia de ${R} sigue en pie: te faltan ${falta} ${u} hoy.`, `${H} va al ${v} %. A la guardia de ${R} le quedan ${falta} ${u}.`], n),
-    };
-  }
+  const falta = rival && q > 0 ? r2(q - ((rival.dias || {})[hoy] || 0)) : 0;
+  const u = rival ? rival.unidad || "" : "";
 
   if (v <= 0)
     return {
-      title: `${H} está en el suelo`,
-      body: R ? `Golpea a ${R} y vuelve a ponerte de pie.` : "Golpea a cualquier rival para levantarte.",
+      title: `¡Ouch! ${H} cayó`,
+      body: R ? `${R} te derrotó. Golpéalo para volver a ponerte de pie.` : "Golpea a cualquier rival para levantarte.",
     };
   if (!R)
-    return {
-      title: `${H} sigue al ${v} %`,
-      body: elegir(["Hoy ya venciste a todos. Mañana vuelven con hambre.", "Nadie queda en pie hoy. Descansa sin culpa."], n),
-    };
+    return { title: `${H} sigue al ${v} %`, body: "Hoy ya venciste a todos. Mañana vuelven con hambre." };
   if (reciente)
     return {
-      title: `${H} resiste al ${v} %`,
-      body: elegir([`Golpeaste hace poco. ${R} todavía respira.`, `Buen golpe. ${R} sigue en pie, no lo sueltes.`], n),
+      title: `${H} aguanta al ${v} %`,
+      body: q > 0
+        ? `Le pegaste a la guardia de ${R}, pero sigue en pie: faltan ${falta} ${u}. Remátala.`
+        : elegir([`Le pegaste a ${R}, pero sigue en pie. Remátalo.`, `${R} está tocado, no derrotado. Termina lo que empezaste.`], n),
     };
   if (v <= 25)
     return {
-      title: `${H} está al ${v} %`,
-      body: elegir([`${R} está por derrotarte. Un golpe te devuelve 10 %.`, `Te queda poco. Golpea a ${R} antes de caer.`], n),
+      title: `¡Ouch! ${H} está al ${v} %`,
+      body: q > 0
+        ? `La guardia de ${R} está por derrotarte. Te faltan ${falta} ${u} hoy.`
+        : elegir([`${R} está a punto de derrotarte. Un golpe te devuelve 10 %.`, `Te queda poco. ¿No te vas a defender? ${R} te va a derrotar.`], n),
     };
   if (nemVivo)
     return {
-      title: "Acabas de recibir un golpe",
-      body: elegir([`${R}, tu némesis, sigue en pie. ${H} baja al ${v} %.`, `Hoy no cuenta hasta que caiga ${R}. Vas al ${v} %.`], n),
+      title: "¡Ouch! Recibiste un golpe",
+      body: q > 0
+        ? `¿No te vas a defender? La guardia de ${R}, tu némesis, sigue en pie: te faltan ${falta} ${u}.`
+        : `¿No te vas a defender? ${R}, tu némesis, te está ganando. Hoy no cuenta hasta que caiga.`,
+    };
+  if (q > 0)
+    return {
+      title: "¡Ouch! Recibiste un golpe",
+      body: elegir([`¿No te vas a defender? La guardia de ${R} sigue en pie: te faltan ${falta} ${u} hoy.`, `La guardia de ${R} te pegó. ${H} va al ${v} %. Te faltan ${falta} ${u}.`], n),
     };
   return {
-    title: "Acabas de recibir un golpe",
+    title: "¡Ouch! Recibiste un golpe",
     body: elegir(
       [
-        `${H} baja al ${v} %. No dejes que ${R} te derrote.`,
-        `${R} te quitó vida. ${H} va al ${v} %.`,
-        `Otra hora sin pelear: ${H} al ${v} %. ${R} te espera.`,
+        `¿No te vas a defender? ${R} te está dando pelea. ${H} va al ${v} %.`,
+        `¿No te vas a defender? ${R} te va a derrotar. ${H} va al ${v} %.`,
+        `${R} te pegó otra vez. ${H} baja al ${v} %. Defiéndete.`,
       ],
       n,
     ),
