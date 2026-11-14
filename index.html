@@ -937,7 +937,11 @@ $('cu-archivo').addEventListener('change',async e=>{
 });
 conectar();
 setInterval(()=>{if(!document.querySelector('.capa.on'))render()},60000);
-if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator&&location.protocol==='https:'){
+  const habia=!!navigator.serviceWorker.controller;let recargado=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(habia&&!recargado&&!document.querySelector('.capa.on')){recargado=true;location.reload()}});
+  navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{r.update();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')r.update()})}).catch(()=>{});
+}
 })();
 </script>
 </body>
