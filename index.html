@@ -300,10 +300,10 @@ label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.1em;t
 <div class="capa" id="capa-h">
   <form class="panel" id="form-h" autocomplete="off">
     <h3 id="h-titulo">Tu personaje</h3>
-    <p class="sub">Pierde vida con cada hora que pasa. Cada golpe que das lo cura.</p>
+    <p class="sub">Pierde vida a cada hora en punto. Cada golpe que das lo cura.</p>
     <label for="h-nombre">Nombre</label>
     <input id="h-nombre" maxlength="30" placeholder="Antonio">
-    <label for="h-drenaje">Vida que pierdes por hora</label>
+    <label for="h-drenaje">Vida que pierdes a cada hora en punto</label>
     <select id="h-drenaje"><option value="2">2 % · paciente</option><option value="3">3 %</option><option value="4">4 % · recomendado</option><option value="5">5 %</option><option value="6">6 % · exigente</option><option value="8">8 % · espartano</option></select>
     <label>Horas de descanso (no pierdes vida)</label>
     <div class="fila"><div><select id="h-ini"></select></div><div><select id="h-fin"></select></div></div>
@@ -405,10 +405,15 @@ const HEROE_SPRITE={"id":"hoplita","pal":{"k":"#140c06","b":"#d8a24a","B":"#8e5c
 const CURA_GOLPE=10, CURA_VICTORIA=20, VIDA_AL_LEVANTARSE=30;
 let caidaMostrada=null;
 function descansando(t,h){const d=new Date(t),x=d.getHours()+d.getMinutes()/60,a=h.descansoIni,b=h.descansoFin;if(a===b)return false;return a>b?(x>=a||x<b):(x>=a&&x<b)}
-function horasActivas(t0,t1,h){const PASO=5*60000;t0=Math.max(t0,t1-14*864e5);let m=0;for(let t=t0;t<t1;t+=PASO){const c=Math.min(PASO,t1-t);if(!descansando(t,h))m+=c}return m/36e5}
-function vidaHeroe(h,ahora){ahora=ahora||Date.now();return Math.max(0,h.vida-horasActivas(h.ultimo,ahora,h)*h.drenaje)}
-function momentoCaida(h){const PASO=5*60000;let t=Math.max(h.ultimo,Date.now()-14*864e5),v=h.vida;while(t<Date.now()){if(!descansando(t,h)){v-=h.drenaje*PASO/36e5;if(v<=0)return t+PASO}t+=PASO}return Date.now()}
-function horasHastaCaer(h,v){const PASO=15*60000;let t=Date.now(),x=v,horas=0;for(let i=0;i<4*24*14&&x>0;i++){if(!descansando(t,h))x-=h.drenaje*PASO/36e5;t+=PASO}return (t-Date.now())/36e5}
+// La vida baja a cada hora en punto (reloj local). Una hora en punto cuenta si la hora anterior no era de descanso.
+const HORA=36e5;
+function siguientePunto(t){const d=new Date(t);d.setMinutes(0,0,0);return d.getTime()+HORA}
+const cuentaPunto=(t,h)=>!descansando(t-60000,h);
+function golpesReloj(h,t0,t1){let n=0;for(let t=siguientePunto(Math.max(t0,t1-14*864e5));t<=t1;t+=HORA)if(cuentaPunto(t,h))n++;return n}
+function vidaHeroe(h,ahora){ahora=ahora||Date.now();return Math.max(0,h.vida-golpesReloj(h,h.ultimo,ahora)*h.drenaje)}
+function momentoCaida(h){const ahora=Date.now();let v=h.vida;for(let t=siguientePunto(Math.max(h.ultimo,ahora-14*864e5));t<=ahora;t+=HORA)if(cuentaPunto(t,h)){v-=h.drenaje;if(v<=0)return t}return ahora}
+function proximoGolpe(h){let t=siguientePunto(Date.now());for(let i=0;i<48&&!cuentaPunto(t,h);i++)t+=HORA;return t}
+function horasHastaCaer(h,v){const ahora=Date.now();let t=siguientePunto(ahora),x=v;for(let i=0;i<24*14;i++,t+=HORA)if(cuentaPunto(t,h)){x-=h.drenaje;if(x<=0)break}return (t-ahora)/HORA}
 function curarHeroe(cura){
   const h=S.heroe;if(!h)return 0;const ahora=Date.now();let v=vidaHeroe(h,ahora),levantado=false;
   if(v<=0){h.caidas=(h.caidas||0)+1;h.enPieDesde=ahora;v=VIDA_AL_LEVANTARSE;levantado=true}
@@ -461,7 +466,8 @@ function heroeHTML(){
     const hr=horasHastaCaer(h,v);
     const desc=descansando(ahora,h)?` · <b>descansando</b> hasta las ${String(h.descansoFin).padStart(2,'0')}:00`:'';
     const dias=Math.floor((ahora-(h.enPieDesde||h.creado||ahora))/864e5);
-    info=`Pierdes <b>${h.drenaje} %</b> por hora${desc}<br>Si no peleas, caes en <b>${hr<1?Math.round(hr*60)+' min':'~'+Math.round(hr)+' h'}</b> · en pie hace ${dias} ${dias===1?'día':'días'} · caídas: ${h.caidas||0}`;
+    const pg=new Date(proximoGolpe(h)).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});
+    info=`Pierdes <b>${h.drenaje} %</b> a cada hora en punto · próximo golpe a las <b>${pg}</b>${desc}<br>Si no peleas, caes en <b>${hr<1?Math.round(hr*60)+' min':'~'+Math.round(hr)+' h'}</b> · en pie hace ${dias} ${dias===1?'día':'días'} · caídas: ${h.caidas||0}`;
   }
   const SB=setBatalla(),peligroH=D0(SB),D=diasBatalla(),mejor=mejorRachaDe(setBatalla()),L=nivelDe(D),base=umbral(L),sig=umbral(L+1),xp=(D-base)/(sig-base)*100;
   return `<article class="card heroe ${pct<=25?'bajo':''} ${caido?'caido-h':''} ${L>=7?'aura':''}" id="heroe-card"><div class="flash"></div>

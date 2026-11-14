@@ -1,6 +1,6 @@
 // Bestiario · función "avisar" (Supabase Edge Function)
 // Cada hora la llama una tarea programada (pg_cron). Calcula cómo va tu héroe
-// y te manda un aviso con nombres reales. En tus horas de descanso no manda nada.
+// y te manda un aviso con nombres reales. Fuera de tus horas activas no manda nada.
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
@@ -48,14 +48,14 @@ function descansando(t: number, h: H, tz: string) {
   if (a === b) return false;
   return a > b ? x >= a || x < b : x >= a && x < b;
 }
+// La vida baja a cada hora en punto. Una hora en punto cuenta si la hora anterior no era de descanso.
+const HORA = 36e5;
+const cuentaPunto = (t: number, h: H, tz: string) => !descansando(t - 60000, h, tz);
 function vidaHeroe(h: H, ahora: number, tz: string) {
-  const PASO = 5 * 60000;
-  let m = 0;
-  for (let t = Math.max(h.ultimo, ahora - 14 * 864e5); t < ahora; t += PASO) {
-    const c = Math.min(PASO, ahora - t);
-    if (!descansando(t, h, tz)) m += c;
-  }
-  return Math.max(0, h.vida - (m / 36e5) * h.drenaje);
+  let n = 0;
+  for (let t = Math.floor(Math.max(h.ultimo, ahora - 14 * 864e5) / HORA) * HORA + HORA; t <= ahora; t += HORA)
+    if (cuentaPunto(t, h, tz)) n++;
+  return Math.max(0, h.vida - n * h.drenaje);
 }
 function nemesisHoy(S: H, hoy: string) {
   let e: H = null;
@@ -133,7 +133,9 @@ async function enviar(subs: any[], forzar: boolean) {
     const S = datos.get(s.user_id);
     if (!S || !S.heroe) continue;
     const tz = s.tz || "America/Guayaquil";
-    if (!forzar && descansando(ahora, S.heroe, tz)) continue;
+    // solo avisa en las horas en punto que le quitan vida (la que cierra una hora activa)
+    const punto = Math.round(ahora / HORA) * HORA;
+    if (!forzar && !cuentaPunto(punto, S.heroe, tz)) continue;
     const m = mensaje(S, ahora, tz);
     try {
       await webpush.sendNotification(s.sub, JSON.stringify(m), { TTL: 3000, urgency: "normal" });
